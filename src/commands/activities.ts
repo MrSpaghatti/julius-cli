@@ -4,10 +4,11 @@ import { JulesAPIClient } from '../api/client.js';
 import { ActivitiesAPI } from '../api/activities.js';
 import { output } from '../output/formatter.js';
 import { AuthError, InvalidArgsError } from '../utils/errors.js';
+import { fetchAllPages } from '../utils/pagination.js';
 import type { OutputFormat } from '../api/types.js';
 
-function getClient(): JulesAPIClient {
-  const apiKey = config.getApiKey();
+async function getClient(): Promise<JulesAPIClient> {
+  const apiKey = await config.getApiKey();
   if (!apiKey) {
     throw new AuthError(
       'No API key found. Set one with: jules-cli auth set <key>'
@@ -25,6 +26,7 @@ export function createActivitiesCommands(): Command {
     .argument('<session-id>', 'Session ID')
     .option('--page-size <n>', 'Results per page (max 100)', config.get('defaultPageSize')?.toString() || '30')
     .option('--page-token <token>', 'Pagination token from previous response')
+    .option('--all', 'Fetch all activities (automatically follows nextPageToken)')
     .option('--type <types...>', 'Filter by activity type(s)')
     .option('--author <author>', 'Filter by author (USER|AGENT)')
     .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
@@ -33,12 +35,13 @@ export function createActivitiesCommands(): Command {
       options: {
         pageSize: string;
         pageToken?: string;
+        all?: boolean;
         type?: string[];
         author?: string;
         format: OutputFormat;
       }
     ) => {
-      const client = getClient();
+      const client = await getClient();
       const api = new ActivitiesAPI(client);
 
       const pageSize = parseInt(options.pageSize, 10);
@@ -46,7 +49,12 @@ export function createActivitiesCommands(): Command {
         throw new InvalidArgsError('Page size must be between 1 and 100');
       }
 
-      const result = await api.list(sessionId, pageSize, options.pageToken);
+      let result;
+      if (options.all) {
+        result = await fetchAllPages((token, size) => api.list(sessionId, size, token), 100);
+      } else {
+        result = await api.list(sessionId, pageSize, options.pageToken);
+      }
 
       // Client-side filtering
       let filteredItems = result.items;
@@ -70,7 +78,7 @@ export function createActivitiesCommands(): Command {
           output(activity, 'pretty', 'activity');
         }
         console.log(`Total: ${filteredItems.length} activities`);
-        if (result.nextPageToken) {
+        if (!options.all && result.nextPageToken) {
           console.log(
             `\nNext page: jules-cli activities list ${sessionId} --page-token ${result.nextPageToken}`
           );
@@ -83,7 +91,8 @@ export function createActivitiesCommands(): Command {
             nextPageToken: result.nextPageToken,
             totalSize: filteredItems.length,
           },
-          options.format
+          options.format,
+          'activity'
         );
       }
     });
@@ -99,7 +108,7 @@ export function createActivitiesCommands(): Command {
       activityId: string,
       options: { format: OutputFormat }
     ) => {
-      const client = getClient();
+      const client = await getClient();
       const api = new ActivitiesAPI(client);
 
       const activity = await api.get(sessionId, activityId);

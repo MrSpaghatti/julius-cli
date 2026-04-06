@@ -5,6 +5,11 @@ import {
   formatPrettySource,
   formatPrettyActivity,
 } from './pretty.js';
+import {
+  formatTableSessions,
+  formatTableSources,
+  formatTableActivities,
+} from './table.js';
 
 export function formatOutput(data: any, format: OutputFormat, type?: string): string {
   if (format === 'quiet') {
@@ -12,6 +17,23 @@ export function formatOutput(data: any, format: OutputFormat, type?: string): st
   }
 
   if (format === 'json') {
+    return formatJSON(data);
+  }
+
+  // Table format
+  if (format === 'table') {
+    if (type === 'session') {
+      const sessions = Array.isArray(data) ? data : (data.sessions || [data]);
+      return formatTableSessions(sessions);
+    }
+    if (type === 'source') {
+      const sources = Array.isArray(data) ? data : (data.sources || [data]);
+      return formatTableSources(sources);
+    }
+    if (type === 'activity') {
+      const activities = Array.isArray(data) ? data : (data.activities || [data]);
+      return formatTableActivities(activities);
+    }
     return formatJSON(data);
   }
 

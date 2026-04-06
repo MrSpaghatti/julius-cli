@@ -4,10 +4,11 @@ import { JulesAPIClient } from '../api/client.js';
 import { SourcesAPI } from '../api/sources.js';
 import { output } from '../output/formatter.js';
 import { AuthError } from '../utils/errors.js';
+import { fetchAllPages } from '../utils/pagination.js';
 import type { OutputFormat } from '../api/types.js';
 
-function getClient(): JulesAPIClient {
-  const apiKey = config.getApiKey();
+async function getClient(): Promise<JulesAPIClient> {
+  const apiKey = await config.getApiKey();
   if (!apiKey) {
     throw new AuthError(
       'No API key found. Set one with: jules-cli auth set <key>'
@@ -24,13 +25,15 @@ export function createSourcesCommands(): Command {
     .description('List all connected repositories')
     .option('--page-size <n>', 'Results per page (max 100)', config.get('defaultPageSize')?.toString() || '30')
     .option('--page-token <token>', 'Pagination token from previous response')
+    .option('--all', 'Fetch all repositories (automatically follows nextPageToken)')
     .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
     .action(async (options: {
       pageSize: string;
       pageToken?: string;
+      all?: boolean;
       format: OutputFormat;
     }) => {
-      const client = getClient();
+      const client = await getClient();
       const api = new SourcesAPI(client);
 
       const pageSize = parseInt(options.pageSize, 10);
@@ -38,7 +41,12 @@ export function createSourcesCommands(): Command {
         throw new Error('Page size must be between 1 and 100');
       }
 
-      const result = await api.list(pageSize, options.pageToken);
+      let result;
+      if (options.all) {
+        result = await fetchAllPages((token, size) => api.list(size, token), 100);
+      } else {
+        result = await api.list(pageSize, options.pageToken);
+      }
 
       if (options.format === 'pretty') {
         console.log('Connected Repositories:\n');
@@ -48,7 +56,7 @@ export function createSourcesCommands(): Command {
         if (result.totalSize) {
           console.log(`Total: ${result.totalSize} repositories`);
         }
-        if (result.nextPageToken) {
+        if (!options.all && result.nextPageToken) {
           console.log(`\nNext page: jules-cli sources list --page-token ${result.nextPageToken}`);
         }
       } else {
@@ -58,7 +66,8 @@ export function createSourcesCommands(): Command {
             nextPageToken: result.nextPageToken,
             totalSize: result.totalSize,
           },
-          options.format
+          options.format,
+          'source'
         );
       }
     });
@@ -69,7 +78,7 @@ export function createSourcesCommands(): Command {
     .argument('<source-id>', 'Source ID (e.g., github/owner/repo)')
     .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
     .action(async (sourceId: string, options: { format: OutputFormat }) => {
-      const client = getClient();
+      const client = await getClient();
       const api = new SourcesAPI(client);
 
       const source = await api.get(sourceId);

@@ -2,98 +2,63 @@
 
 **Project:** jules-cli-but-better  
 **Date:** 2026-04-06  
-**Status:** Phase 1 & 2 Complete (MVP + Interaction)  
-**Version:** 0.1.0
+**Status:** Phase 3 Complete, Phase 4 In Progress  
+**Version:** 0.2.0
 
 ---
 
 ## Executive Summary
 
-Successfully implemented a production-ready AI-first CLI tool for the Jules REST API. The tool provides complete JSON-first output, full API coverage for core endpoints, and non-interactive commands optimized for AI agent automation.
+Version 0.2.0 delivers critical enhancements to automation, security, and developer productivity. The CLI now supports secure API key storage, Git repository inference, enhanced pagination, and a new tabular output format. Furthermore, the first automated test suite has been established, moving the project toward production stability.
 
 **Completion Status:**
 - ✅ Phase 1 (Foundation): 100% Complete
 - ✅ Phase 2 (Interaction): 100% Complete
-- ✅ Phase 3 (Automation): 50% Complete (Wait/Poll and Config commands implemented)
-- ⏳ Phase 4 (Polish): 0% Complete
+- ✅ Phase 3 (Automation): 100% Complete
+- ⏳ Phase 4 (Polish): 60% Complete (Testing suite established)
 
 ---
 
 ## Deliverables
 
 ### Documentation ✅
-1. **README.md** (3.1 KB)
-   - Quick start guide
-   - Command reference
-   - Configuration instructions
-   - Exit codes documentation
-
-2. **IMPLEMENTATION.md** (11.9 KB)
-   - Detailed implementation log
-   - Technical decisions
-   - API endpoint mapping
-   - Configuration locations
-   - Phase-by-phase breakdown
-
-3. **CHANGELOG.md** (3.5 KB)
-   - Version history
-   - Feature additions
-   - Breaking changes (none yet)
-
-4. **TESTING.md** (9.6 KB)
-   - Manual test results
-   - Test coverage status
-   - Pending test items
-   - Security checklist
-
-5. **examples/ai-agent-workflows.md** (13.4 KB)
-   - 10 complete workflow examples
-   - Bash, Python, Node.js integrations
-   - CI/CD integration example
-   - Best practices for AI agents
-
-6. **LICENSE** (1.1 KB)
-   - MIT License
-
-7. **PLAN.md** (34.4 KB)
-   - Original implementation plan
-   - Complete architecture spec
-   - API documentation
+1. **README.md** (Updated)
+2. **CHANGELOG.md** (Updated)
+3. **TESTING.md** (Updated with automated results)
+4. **STATUS.md** (This document)
 
 ### Source Code ✅
 
-**Source Code (19 TypeScript files):**
+**New Modules (3):**
+- `src/utils/git.ts` - Repository inference logic
+- `src/utils/pagination.ts` - Auto-pagination utility
+- `src/output/table.ts` - Tabular output formatter
 
-1. **Entry Points:**
-   - `src/index.ts` - CLI entry point
-   - `src/cli.ts` - Commander setup
+**Updated Modules:**
+- `src/config/index.ts` - Secure storage integration
+- `src/output/formatter.ts` - Table support
+- `src/commands/*.ts` - Async command support and --all flag
 
-2. **API Layer (5 files):**
-   - `src/api/types.ts` - TypeScript interfaces (120+ lines)
-   - `src/api/client.ts` - Base HTTP client with retry
-   - `src/api/sources.ts` - Sources API endpoints
-   - `src/api/sessions.ts` - Sessions API endpoints
-   - `src/api/activities.ts` - Activities API endpoints
+---
 
-3. **Commands (7 files):**
-   - `src/commands/auth.ts` - Authentication commands
-   - `src/commands/sources.ts` - Repository commands
-   - `src/commands/sessions.ts` - Session management
-   - `src/commands/activities.ts` - Activity viewing
-   - `src/commands/config.ts` - Configuration management
-   - `src/commands/wait.ts` - Wait/poll logic
-   - `src/commands/wait-cli.ts` - Wait CLI command
+## Features Implemented (New in 0.2.0)
 
-4. **Configuration:**
-   - `src/config/index.ts` - Config management with conf
+### Automation ✅
+- **Git Inference:** `sessions create` now automatically finds the repository.
+- **Enhanced Pagination:** `--all` flag for all listing commands.
 
-5. **Output Formatters (3 files):**
-   - `src/output/formatter.ts` - Format dispatcher
-   - `src/output/json.ts` - JSON output
-   - `src/output/pretty.ts` - Colored pretty output
+### Security ✅
+- **Secure Storage:** API keys stored in OS Keychain via `cross-keychain`.
+- **Masked Secrets:** API key is always masked in config output.
 
-6. **Utilities:**
-   - `src/utils/errors.ts` - Error types and exit codes
+### User Experience ✅
+- **Table Output:** `--format table` for clean human-readable lists.
+- **Robust Polling:** `wait` command handles network flakiness better.
+
+### Testing (New) ✅
+- **Unit Test Suite:** 18 tests passing across API client and utilities.
+- **MSW Integration:** Mocking framework for API responses.
+- **ESM Support:** Modern Jest configuration for TypeScript ESM.
 
 **Configuration Files:**
 - `package.json` - Dependencies and scripts

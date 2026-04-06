@@ -1,17 +1,18 @@
 import Conf from 'conf';
+import { setPassword, getPassword, deletePassword } from 'cross-keychain';
 import type { CLIConfig } from '../api/types.js';
 
+const SERVICE_NAME = 'jules-cli';
+const ACCOUNT_NAME = 'api-key';
+
 const schema = {
-  apiKey: {
-    type: 'string',
-  },
   apiEndpoint: {
     type: 'string',
     default: 'https://jules.googleapis.com/v1alpha',
   },
   defaultFormat: {
     type: 'string',
-    enum: ['json', 'pretty', 'quiet'],
+    enum: ['json', 'pretty', 'quiet', 'table'],
     default: 'json',
   },
   defaultPageSize: {
@@ -58,6 +59,14 @@ class ConfigManager {
     this.conf.clear();
   }
 
+  async clearApiKey(): Promise<void> {
+    try {
+      await deletePassword(SERVICE_NAME, ACCOUNT_NAME);
+    } catch (error) {
+      // Ignore if it doesn't exist
+    }
+  }
+
   has(key: keyof CLIConfig): boolean {
     return this.conf.has(key);
   }
@@ -66,14 +75,22 @@ class ConfigManager {
     return this.conf.store;
   }
 
-  getApiKey(): string | undefined {
+  async getApiKey(): Promise<string | undefined> {
     // Check environment variable first
     const envKey = process.env.JULES_API_KEY;
     if (envKey) {
       return envKey;
     }
-    // Fall back to config
-    return this.conf.get('apiKey');
+    // Fall back to keychain
+    try {
+      return await getPassword(SERVICE_NAME, ACCOUNT_NAME) || undefined;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async setApiKey(key: string): Promise<void> {
+    await setPassword(SERVICE_NAME, ACCOUNT_NAME, key);
   }
 
   getApiEndpoint(): string {
@@ -84,12 +101,13 @@ class ConfigManager {
     return this.conf.get('apiEndpoint') || 'https://jules.googleapis.com/v1alpha';
   }
 
-  getApiKeySource(): 'environment' | 'config' | 'none' {
+  async getApiKeySource(): Promise<'environment' | 'keychain' | 'none'> {
     if (process.env.JULES_API_KEY) {
       return 'environment';
     }
-    if (this.conf.has('apiKey')) {
-      return 'config';
+    const key = await this.getApiKey();
+    if (key) {
+      return 'keychain';
     }
     return 'none';
   }

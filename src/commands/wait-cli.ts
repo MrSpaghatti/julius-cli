@@ -19,7 +19,7 @@ export function createWaitCommand(): Command {
     .option('--verbose', 'Enable verbose logging')
     .action(async (sessionId: string, options: any) => {
       try {
-        const apiKey = config.getApiKey();
+        const apiKey = await config.getApiKey();
         const apiEndpoint = config.getApiEndpoint();
 
         if (!apiKey) {

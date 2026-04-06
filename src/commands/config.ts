@@ -12,8 +12,8 @@ export function createConfigCommands(): Command {
     .description('Set a configuration value')
     .argument('<key>', 'Configuration key (apiKey, apiEndpoint, defaultFormat, defaultPageSize, pollInterval, maxPollAttempts)')
     .argument('<value>', 'Configuration value')
-    .action((key: string, value: string) => {
-      const validKeys: (keyof CLIConfig)[] = [
+    .action(async (key: string, value: string) => {
+      const validKeys: (string)[] = [
         'apiKey',
         'apiEndpoint',
         'defaultFormat',
@@ -24,6 +24,19 @@ export function createConfigCommands(): Command {
 
       if (!validKeys.includes(key as any)) {
         throw new InvalidArgsError(`Invalid config key: ${key}. Valid keys: ${validKeys.join(', ')}`);
+      }
+
+      if (key === 'apiKey') {
+        await config.setApiKey(value);
+        output(
+          {
+            status: 'success',
+            key: 'apiKey',
+            message: 'API key stored in secure storage',
+          },
+          'json'
+        );
+        return;
       }
 
       let parsedValue: any = value;
@@ -37,8 +50,8 @@ export function createConfigCommands(): Command {
       }
 
       // Handle enum values
-      if (key === 'defaultFormat' && !['json', 'pretty', 'quiet'].includes(value)) {
-        throw new InvalidArgsError(`Value for defaultFormat must be one of: json, pretty, quiet`);
+      if (key === 'defaultFormat' && !['json', 'pretty', 'quiet', 'table'].includes(value)) {
+        throw new InvalidArgsError(`Value for defaultFormat must be one of: json, pretty, quiet, table`);
       }
 
       config.set(key as keyof CLIConfig, parsedValue);
@@ -58,8 +71,19 @@ export function createConfigCommands(): Command {
     .description('Get a configuration value')
     .argument('<key>', 'Configuration key')
     .option('--format <format>', 'Output format (json|pretty|quiet)', 'json')
-    .action((key: string, options: { format: OutputFormat }) => {
-      const value = config.get(key as keyof CLIConfig);
+    .action(async (key: string, options: { format: OutputFormat }) => {
+      let value;
+      if (key === 'apiKey') {
+        value = await config.getApiKey();
+        // Mask it even in 'get' if it's the full key, or just show masked
+        if (value && value.length > 8) {
+          value = `${value.substring(0, 4)}...${value.substring(value.length - 4)}`;
+        } else if (value) {
+          value = '********';
+        }
+      } else {
+        value = config.get(key as keyof CLIConfig);
+      }
       
       output(
         {
@@ -73,19 +97,21 @@ export function createConfigCommands(): Command {
   configCmd
     .command('list')
     .description('List all configuration values')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', 'json')
-    .action((options: { format: OutputFormat }) => {
+    .option('--format <format>', 'Output format (json|pretty|quiet|table)', 'json')
+    .action(async (options: { format: OutputFormat }) => {
       const allConfig = config.getAll();
+      const apiKey = await config.getApiKey();
       
       // Mask API key in list output for security
-      const displayConfig = { ...allConfig };
-      if (displayConfig.apiKey) {
-        const key = displayConfig.apiKey;
-        if (key.length > 8) {
-          displayConfig.apiKey = `${key.substring(0, 4)}...${key.substring(key.length - 4)}`;
+      const displayConfig: any = { ...allConfig };
+      if (apiKey) {
+        if (apiKey.length > 8) {
+          displayConfig.apiKey = `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}`;
         } else {
           displayConfig.apiKey = '********';
         }
+      } else {
+        displayConfig.apiKey = 'none';
       }
 
       output(
@@ -99,11 +125,11 @@ export function createConfigCommands(): Command {
   configCmd
     .command('reset')
     .description('Reset configuration to defaults (keeps API key)')
-    .action(() => {
-      const apiKey = config.get('apiKey');
+    .action(async () => {
+      const apiKey = await config.getApiKey();
       config.clear();
       if (apiKey) {
-        config.set('apiKey', apiKey);
+        await config.setApiKey(apiKey);
       }
 
       output(

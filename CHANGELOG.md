@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-04-06
+
+### Added
+- **Secure Storage:** API key is now stored in the OS Keychain using `cross-keychain`.
+- **Git Inference:** `sessions create` now automatically infers the repository from the local `.git/config` if not provided.
+- **Table Output:** New `--format table` option for human-readable tabular data.
+- **Enhanced Pagination:** Added `--all` flag to `sources list`, `sessions list`, and `activities list` to automatically fetch all pages.
+- **Unit Test Suite:** Established automated testing infrastructure with Jest and MSW.
+  - Unit tests for `JulesAPIClient` covering error handling and retries.
+  - Unit tests for pagination and git inference utilities.
+
+### Changed
+- All API-related commands are now async at the top level to support secure storage retrieval.
+- `ConfigManager.getApiKey()` and `setApiKey()` are now asynchronous.
+- `config` subcommands updated to handle secure API key storage.
+- Improved `wait` command with more robust polling and activity streaming.
+
+### Fixed
+- Redundant "undefined" outputs and duplicate code blocks from previous versions.
+- Modernized Jest configuration for ESM support.
+- Fixed `axios-retry` configuration to properly respect `Retry-After` headers.
+
 ## [0.1.2] - 2026-04-06
 
 ### Fixed

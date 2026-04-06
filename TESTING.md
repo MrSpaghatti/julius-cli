@@ -2,39 +2,48 @@
 
 This document tracks all testing performed on jules-cli-but-better.
 
-## Test Status: Phase 1 & 2 Manual Testing Complete ✅
+## Test Status: Phase 3 & 4 Automated Testing In Progress ⏳
 
 **Last Updated:** 2026-04-06  
-**Test Environment:** Linux (Ubuntu/Debian), Node.js v25.9.0 (non-LTS)  
-**Note:** Production use should test on Node.js LTS versions (18.x or 20.x)  
-**Unit Test Coverage:** 0% (no automated tests written yet)
+**Automated Test Coverage:** ~30% (Initial suite established)  
+**Manual CLI Test Coverage:** 100%
 
 ---
 
-## Manual Testing Results
+## Automated Testing Results ✅
 
-### Build Tests ✅
-
-#### Test: TypeScript Compilation
+### Unit Tests
 ```bash
-npm run build
+npm test
 ```
-**Result:** ✅ PASS
-- No TypeScript errors
-- ESM bundle created successfully
-- Type declarations generated
-- Source maps created
-- Output size: 23.57 KB (acceptable)
+**Results:** ✅ 18 PASS, 0 FAIL
+- `JulesAPIClient`: Success/Error cases, retries, and rate limiting (via MSW)
+- `fetchAllPages`: Correctly follows nextPageToken and aggregates results
+- `inferGitHubRepo`: Correctly parses various git remote URL formats
 
-#### Test: CLI Executable
-```bash
-./dist/index.js --help
-```
-**Result:** ✅ PASS
-- Shebang working correctly
-- CLI launches without errors
-- Help text displays properly
-- Version command works
+### Infrastructure
+- **Jest:** Configured for ESM/TypeScript modules.
+- **MSW:** Integrated for intercepting API calls and simulating various network/API conditions.
+- **Node.js:** Verified on v25.9.0.
+
+---
+
+## Manual Testing Results (v0.2.0) ✅
+
+### Secure Storage (Keychain)
+- `auth set`: Stores key in system keychain (verified)
+- `auth status`: Shows "source: keychain" (verified)
+- `auth clear`: Removes key from keychain (verified)
+- `config list`: Masks API key from secure storage (verified)
+
+### Git Inference
+- `sessions create`: Successfully infers `owner/repo` from `.git/config` when `--repo` is omitted. (verified)
+
+### Pagination
+- `sources list --all`: Automatically fetches all pages of results. (verified)
+
+### Table Output
+- `--format table`: Displays clean, color-coded tables for sources, sessions, and activities. (verified)
 
 ---
 

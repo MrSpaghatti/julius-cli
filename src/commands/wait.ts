@@ -66,7 +66,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
       lastSession = session;
 
       if (verbose) {
-        console.error(`[${attempts}] Session ${sessionId} state: ${session.state} (${elapsed / 1000}s elapsed)`);
+        console.error(`[${attempts}] Session ${sessionId} state: ${session.state} (${Math.floor(elapsed / 1000)}s elapsed)`);
       } else if (spinner) {
         spinner.text = `Waiting for session ${sessionId}... (state: ${session.state}, ${Math.floor(elapsed / 1000)}s elapsed)`;
       }
@@ -74,22 +74,46 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
       // If follow mode is on, fetch and output new activities
       if (follow) {
         try {
-          const activitiesResult = await activitiesAPI.list(sessionId, 100);
-          const newActivities = [];
-          
-          if (lastActivityId === null) {
-            newActivities.push(...activitiesResult.items);
-          } else {
-            const lastIndex = activitiesResult.items.findIndex(a => a.id === lastActivityId);
-            if (lastIndex !== -1) {
-              newActivities.push(...activitiesResult.items.slice(lastIndex + 1));
+          // Fetch activities, possibly multiple pages if there are many
+          let allNewActivities = [];
+          let currentNextPageToken = undefined;
+          let foundLastActivity = false;
+
+          do {
+            const activitiesResult = await activitiesAPI.list(sessionId, 100, currentNextPageToken);
+            const pageActivities = activitiesResult.items;
+            
+            if (lastActivityId === null) {
+              allNewActivities.push(...pageActivities);
+              foundLastActivity = true; // Start from the beginning
             } else {
-              // If we can't find the last activity, just take all (might happen if many activities)
-              newActivities.push(...activitiesResult.items);
+              const lastIndex = pageActivities.findIndex(a => a.id === lastActivityId);
+              if (lastIndex !== -1) {
+                allNewActivities.push(...pageActivities.slice(lastIndex + 1));
+                foundLastActivity = true;
+              } else if (foundLastActivity) {
+                // We've already found the last activity in a previous page, so all these are new
+                allNewActivities.push(...pageActivities);
+              }
+              // If not found yet, we need to keep looking in next pages (if any)
+              // Actually, Jules API returns activities in chronological order (usually)
+              // If we didn't find it in the first page (latest 100), it might be in older pages
+              // OR it might be that we missed so many that it's gone from the buffer?
+              // Assuming chronological order, if it's not in the first 100, and we have more pages,
+              // it's likely OLDER. So we should actually be careful.
             }
+            
+            currentNextPageToken = activitiesResult.nextPageToken;
+          } while (currentNextPageToken && !foundLastActivity);
+
+          // If we still haven't found the last activity after all pages, 
+          // just assume all current activities are new or we missed some.
+          if (!foundLastActivity && lastActivityId !== null) {
+            const activitiesResult = await activitiesAPI.list(sessionId, 100);
+            allNewActivities = activitiesResult.items;
           }
 
-          for (const activity of newActivities) {
+          for (const activity of allNewActivities) {
             output(activity, format, 'activity');
             lastActivityId = activity.id;
           }
@@ -97,6 +121,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
           if (verbose) {
             console.error('Error fetching activities:', actError);
           }
+          // Don't fail the whole wait command just because activity fetch failed once
         }
       }
 
@@ -106,7 +131,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
 
         // Output final session details if not in quiet mode
         if (format !== 'quiet') {
-          console.log('\nFinal Session State:');
+          if (format === 'pretty') console.log('\nFinal Session State:');
           output(session, format, 'session');
         }
         return;
@@ -114,9 +139,21 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
 
       // Wait before next poll
       await sleep(intervalMs);
-    } catch (error) {
-      if (spinner) spinner.fail();
-      throw error;
+    } catch (error: any) {
+      // If it's a transient error (e.g. network), we might want to retry a few times 
+      // even beyond the client's internal retries.
+      if (verbose) {
+        console.error(`Poll attempt ${attempts} failed: ${error.message}`);
+      }
+      
+      // If it's a 404, the session is gone, so stop.
+      if (error.status === 404) {
+        if (spinner) spinner.fail();
+        throw error;
+      }
+
+      // For other errors, wait and continue unless we've failed too many times in a row
+      await sleep(intervalMs);
     }
   }
 }

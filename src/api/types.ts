@@ -78,7 +78,7 @@ export interface CLIConfig {
   maxPollAttempts?: number; // Default: 120
 }
 
-export type OutputFormat = 'json' | 'pretty' | 'quiet';
+export type OutputFormat = 'json' | 'pretty' | 'quiet' | 'table';
 
 // Command Options
 export interface CreateSessionOptions {

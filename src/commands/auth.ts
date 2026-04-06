@@ -12,12 +12,12 @@ export function createAuthCommands(): Command {
     .command('set')
     .description('Store API key for future use')
     .argument('<api-key>', 'Jules API key')
-    .action((apiKey: string) => {
+    .action(async (apiKey: string) => {
       if (!apiKey || apiKey.trim().length === 0) {
         throw new AuthError('API key cannot be empty');
       }
 
-      config.set('apiKey', apiKey.trim());
+      await config.setApiKey(apiKey.trim());
 
       output(
         {
@@ -33,8 +33,8 @@ export function createAuthCommands(): Command {
     .description('Check if API key is configured and valid')
     .option('--format <format>', 'Output format (json|pretty|quiet)', 'json')
     .action(async (options: { format: OutputFormat }) => {
-      const apiKey = config.getApiKey();
-      const source = config.getApiKeySource();
+      const apiKey = await config.getApiKey();
+      const source = await config.getApiKeySource();
       const endpoint = config.getApiEndpoint();
 
       if (!apiKey) {
@@ -63,8 +63,8 @@ export function createAuthCommands(): Command {
   auth
     .command('clear')
     .description('Remove stored API key')
-    .action(() => {
-      config.delete('apiKey');
+    .action(async () => {
+      await config.clearApiKey();
 
       output(
         {

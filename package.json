@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc --noEmit && tsup",
     "dev": "tsup --watch",
-    "test": "jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "jest --watch",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -36,6 +36,7 @@
     "cli-table3": "^0.6.5",
     "commander": "^12.1.0",
     "conf": "^13.0.1",
+    "cross-keychain": "^1.1.0",
     "ora": "^8.2.0"
   },
   "devDependencies": {
