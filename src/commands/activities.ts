@@ -23,11 +23,11 @@ export function createActivitiesCommands(): Command {
     .command('list')
     .description('List activities for a session')
     .argument('<session-id>', 'Session ID')
-    .option('--page-size <n>', 'Results per page (max 100)', '30')
+    .option('--page-size <n>', 'Results per page (max 100)', config.get('defaultPageSize')?.toString() || '30')
     .option('--page-token <token>', 'Pagination token from previous response')
     .option('--type <types...>', 'Filter by activity type(s)')
     .option('--author <author>', 'Filter by author (USER|AGENT)')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
     .action(async (
       sessionId: string,
       options: {
@@ -67,7 +67,7 @@ export function createActivitiesCommands(): Command {
       if (options.format === 'pretty') {
         console.log(`Activities for session ${sessionId}:\n`);
         for (const activity of filteredItems) {
-          console.log(output(activity, 'pretty', 'activity'));
+          output(activity, 'pretty', 'activity');
         }
         console.log(`Total: ${filteredItems.length} activities`);
         if (result.nextPageToken) {

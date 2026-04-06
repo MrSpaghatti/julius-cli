@@ -95,10 +95,10 @@ All fixed items verified:
 ## Remaining Action Items
 
 For future work:
-1. Consider implementing wait/poll commands
-2. Add config management commands
-3. Write unit tests (achieve >80% coverage)
-4. Implement client-side filtering
+1. Write unit tests (achieve >80% coverage)
+2. Implement enhanced pagination (auto-fetch all pages)
+3. Implement Git repository inference from current directory
+4. Add table output for lists
 5. Test on Node.js LTS versions (18.x, 20.x)
 6. Consider OS keychain integration for API keys
 7. Verify sessions cancel endpoint with live API
@@ -106,4 +106,47 @@ For future work:
 
 ---
 
-**Summary:** Fixed 8 critical documentation and configuration issues. Project now accurately represents implementation status and uses modern TypeScript configuration.
+## Fixes Applied - 2026-04-06 (Session 2)
+
+### 9. ✅ Fixed Critical Compilation Errors
+**Issue:** Project failed to compile with `tsc` due to invalid `CLIError` calls and a broken import in `wait.ts`.  
+**Fix:** 
+- Updated `CLIError` constructor calls to use numeric `ExitCode` instead of an object.
+- Fixed `outputFormatter` import in `src/commands/wait.ts` to use `output`.
+**Impact:** Project now passes full type checking (`tsc --noEmit`).
+
+### 10. ✅ Eliminated Redundant Logging
+**Issue:** `console.log(output(...))` was causing "undefined" to be printed to the console because `output()` returns `void`.  
+**Fix:** Removed redundant `console.log` wrappers in `sources.ts`, `sessions.ts`, and `activities.ts`.  
+**Impact:** Clean, single-line output for CLI commands.
+
+### 11. ✅ Aligned Command Defaults with Config
+**Issue:** Command-line options had hardcoded defaults that overrode user-defined configuration in `config.json`.  
+**Fix:** Updated all commands to use `config.get()` for default values (format, page size, poll interval).  
+**Impact:** User configuration now correctly propagates to all commands.
+
+### 12. ✅ Strengthened Build Pipeline
+**Issue:** `npm run build` (tsup) was succeeding even when TypeScript errors were present.  
+**Fix:** Updated `package.json` build script to `tsc --noEmit && tsup`.  
+**Impact:** Prevents shipping broken code; build will fail if types are incorrect.
+
+### 13. ✅ Improved Auth Transparency
+**Issue:** `auth status` claimed to "validate" the API key but only checked local config.  
+**Fix:** Updated output to clarify validation is local-only and added a hint to use `sources list` for connectivity testing.  
+**Impact:** Clearer user expectations regarding authentication state.
+
+### 14. ✅ Resolved Syntax Errors (Duplicate Code)
+**Issue:** Broken `replace` operations during refactoring left duplicate/invalid code at the end of `sources.ts` and `sessions.ts`.  
+**Fix:** Manually cleaned up and verified file contents.  
+**Impact:** Correct syntax and successful compilation.
+
+## Verification (Session 2)
+
+- ✅ `npx tsc --noEmit` passes with 0 errors.
+- ✅ `npm run build` succeeds.
+- ✅ Redundant "undefined" lines removed from output.
+- ✅ Config defaults verified in command help text.
+
+---
+
+**Summary:** Fixed 6 critical architectural and logic errors. Project is now stable, type-safe, and correctly respects user configuration.

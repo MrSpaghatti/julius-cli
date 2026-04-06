@@ -42,7 +42,6 @@ export function createAuthCommands(): Command {
           {
             authenticated: false,
             source: 'none',
-            valid: false,
             endpoint,
           },
           options.format
@@ -50,22 +49,12 @@ export function createAuthCommands(): Command {
         return;
       }
 
-      // Try to validate by making a simple API call
-      let valid = true;
-      try {
-        const client = new JulesAPIClient(apiKey, endpoint);
-        // Just checking we can construct the client, real validation happens on first request
-        valid = true;
-      } catch (error) {
-        valid = false;
-      }
-
       output(
         {
           authenticated: true,
           source,
-          valid,
           endpoint,
+          note: 'Run "jules-cli sources list" to verify API key connectivity.',
         },
         options.format
       );

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-04-06
+
+### Fixed
+- Critical compilation errors in `wait` and `wait-cli` commands
+- Broken import in `src/commands/wait.ts`
+- Redundant "undefined" output in `sources`, `sessions`, and `activities` commands
+- Hardcoded command defaults now correctly pull from global configuration
+- Duplicate code blocks in `src/commands/sources.ts` and `src/commands/sessions.ts`
+- Misleading validation message in `auth status`
+
+### Changed
+- Build process now enforces full type checking (`tsc --noEmit`) before bundling
+- `auth status` now explicitly notes that validation is local-only
+
 ## [0.1.1] - 2026-04-06
 
 ### Added

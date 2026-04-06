@@ -22,9 +22,9 @@ export function createSourcesCommands(): Command {
   sources
     .command('list')
     .description('List all connected repositories')
-    .option('--page-size <n>', 'Results per page (max 100)', '30')
+    .option('--page-size <n>', 'Results per page (max 100)', config.get('defaultPageSize')?.toString() || '30')
     .option('--page-token <token>', 'Pagination token from previous response')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
     .action(async (options: {
       pageSize: string;
       pageToken?: string;
@@ -43,8 +43,7 @@ export function createSourcesCommands(): Command {
       if (options.format === 'pretty') {
         console.log('Connected Repositories:\n');
         for (const source of result.items) {
-          const formatted = output(source, 'pretty', 'source');
-          console.log(formatted);
+          output(source, 'pretty', 'source');
         }
         if (result.totalSize) {
           console.log(`Total: ${result.totalSize} repositories`);
@@ -68,7 +67,7 @@ export function createSourcesCommands(): Command {
     .command('get')
     .description('Get details for a specific source')
     .argument('<source-id>', 'Source ID (e.g., github/owner/repo)')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
     .action(async (sourceId: string, options: { format: OutputFormat }) => {
       const client = getClient();
       const api = new SourcesAPI(client);

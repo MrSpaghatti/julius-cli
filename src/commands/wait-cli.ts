@@ -11,10 +11,10 @@ export function createWaitCommand(): Command {
   wait
     .description('Wait for a session to reach a specific state (blocks until completion)')
     .argument('<session-id>', 'Session ID to wait for')
-    .option('-t, --timeout <seconds>', 'Timeout in seconds (default: 600)', '600')
-    .option('-i, --interval <seconds>', 'Poll interval in seconds (default: 5)', '5')
+    .option('-t, --timeout <seconds>', 'Timeout in seconds (default: 600)', config.get('maxPollAttempts') ? (config.get('maxPollAttempts')! * (config.get('pollInterval')! / 1000)).toString() : '600')
+    .option('-i, --interval <seconds>', 'Poll interval in seconds (default: 5)', (config.get('pollInterval')! / 1000).toString() || '5')
     .option('-s, --state <state>', 'Wait for specific state (default: COMPLETED, FAILED, or CANCELLED)')
-    .option('-f, --format <format>', 'Output format: json, pretty, quiet', 'json')
+    .option('-f, --format <format>', 'Output format: json, pretty, quiet', config.get('defaultFormat') || 'json')
     .option('--follow', 'Stream activity updates while waiting')
     .option('--verbose', 'Enable verbose logging')
     .action(async (sessionId: string, options: any) => {
@@ -23,9 +23,7 @@ export function createWaitCommand(): Command {
         const apiEndpoint = config.getApiEndpoint();
 
         if (!apiKey) {
-          throw new CLIError('API key not set. Run: jules-cli auth set <api-key>', {
-            exitCode: 3,
-          });
+          throw new CLIError('API key not set. Run: jules-cli auth set <api-key>', 3);
         }
 
         const client = new JulesAPIClient(apiKey, apiEndpoint);
@@ -35,11 +33,11 @@ export function createWaitCommand(): Command {
         const interval = parseInt(options.interval, 10);
 
         if (isNaN(timeout) || timeout <= 0) {
-          throw new CLIError('Timeout must be a positive number', { exitCode: 2 });
+          throw new CLIError('Timeout must be a positive number', 2);
         }
 
         if (isNaN(interval) || interval <= 0) {
-          throw new CLIError('Interval must be a positive number', { exitCode: 2 });
+          throw new CLIError('Interval must be a positive number', 2);
         }
 
         // Validate state if provided
@@ -56,7 +54,7 @@ export function createWaitCommand(): Command {
         if (options.state && !validStates.includes(options.state as SessionState)) {
           throw new CLIError(
             `Invalid state: ${options.state}. Valid states: ${validStates.join(', ')}`,
-            { exitCode: 2 }
+            2
           );
         }
 

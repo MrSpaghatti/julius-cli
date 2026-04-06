@@ -28,7 +28,7 @@ export function createSessionsCommands(): Command {
     .option('-b, --branch <branch>', 'Starting branch (default: main)')
     .option('--auto-pr', 'Automatically create PR when done')
     .option('--require-approval', 'Require plan approval before execution')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
     .action(async (options: {
       repo: string;
       prompt: string;
@@ -73,9 +73,9 @@ export function createSessionsCommands(): Command {
     .description('List sessions')
     .option('--repo <repo>', 'Filter by repository (owner/repo)')
     .option('--state <states...>', 'Filter by state(s)')
-    .option('--page-size <n>', 'Results per page (max 100)', '30')
+    .option('--page-size <n>', 'Results per page (max 100)', config.get('defaultPageSize')?.toString() || '30')
     .option('--page-token <token>', 'Pagination token from previous response')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
     .action(async (options: {
       repo?: string;
       state?: string[];
@@ -113,7 +113,7 @@ export function createSessionsCommands(): Command {
       if (options.format === 'pretty') {
         console.log('Sessions:\n');
         for (const session of filteredItems) {
-          console.log(output(session, 'pretty', 'session'));
+          output(session, 'pretty', 'session');
         }
         console.log(`Total: ${filteredItems.length} sessions`);
         if (result.nextPageToken) {
@@ -135,7 +135,7 @@ export function createSessionsCommands(): Command {
     .command('get')
     .description('Get session details')
     .argument('<session-id>', 'Session ID')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
     .action(async (sessionId: string, options: { format: OutputFormat }) => {
       const client = getClient();
       const api = new SessionsAPI(client);
@@ -150,7 +150,7 @@ export function createSessionsCommands(): Command {
     .description('Send a message to an active session')
     .argument('<session-id>', 'Session ID')
     .requiredOption('-m, --message <message>', 'Message to send')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
     .action(async (
       sessionId: string,
       options: { message: string; format: OutputFormat }
@@ -174,7 +174,7 @@ export function createSessionsCommands(): Command {
     .command('approve')
     .description('Approve the plan for a session')
     .argument('<session-id>', 'Session ID')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
     .action(async (sessionId: string, options: { format: OutputFormat }) => {
       const client = getClient();
       const api = new SessionsAPI(client);
@@ -195,7 +195,7 @@ export function createSessionsCommands(): Command {
     .command('cancel')
     .description('Cancel a running session')
     .argument('<session-id>', 'Session ID')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
     .action(async (sessionId: string, options: { format: OutputFormat }) => {
       const client = getClient();
       const api = new SessionsAPI(client);

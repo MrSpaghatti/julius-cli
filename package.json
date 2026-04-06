@@ -7,7 +7,7 @@
     "jules-cli": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsc --noEmit && tsup",
     "dev": "tsup --watch",
     "test": "jest",
     "test:watch": "jest --watch",

@@ -2,8 +2,8 @@ import { JulesAPIClient } from '../api/client.js';
 import { SessionsAPI } from '../api/sessions.js';
 import { ActivitiesAPI } from '../api/activities.js';
 import { Session, SessionState, OutputFormat } from '../api/types.js';
-import { outputFormatter, output } from '../output/formatter.js';
-import { CLIError } from '../utils/errors.js';
+import { output } from '../output/formatter.js';
+import { CLIError, ExitCode } from '../utils/errors.js';
 import ora from 'ora';
 
 export interface WaitCommandOptions {
@@ -56,7 +56,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
       if (spinner) spinner.fail();
       throw new CLIError(
         `Timeout waiting for session ${sessionId} after ${timeout} seconds. Last state: ${lastSession?.state || 'UNKNOWN'}`,
-        { exitCode: 6 } // TIMEOUT
+        ExitCode.TIMEOUT
       );
     }
 
