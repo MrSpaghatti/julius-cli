@@ -1,0 +1,15 @@
+src/
+test/
+examples/
+.git/
+.github/
+*.test.ts
+*.spec.ts
+tsconfig.json
+tsup.config.ts
+jest.config.js
+.eslintrc.json
+.prettierrc
+PLAN.md
+*.log
+node_modules/
