@@ -70,7 +70,7 @@ export function formatPrettyActivity(activity: Activity): string {
 
   lines.push(`${authorBadge} ${typeColor(activity.type)} ${chalk.gray(activity.id)}`);
   lines.push(chalk.gray(`  Time: ${new Date(activity.createTime).toLocaleString()}`));
-  lines.push(`  ${activity.content}`);
+  lines.push(`  ${activity.content.replace(/\n/g, '\n  ')}`);
   lines.push('');
 
   return lines.join('\n');
@@ -78,15 +78,18 @@ export function formatPrettyActivity(activity: Activity): string {
 
 function formatState(state: string): string {
   switch (state) {
-    case 'COMPLETED':
-      return chalk.green(state);
-    case 'FAILED':
-    case 'CANCELLED':
-      return chalk.red(state);
+    case 'ACTIVE':
     case 'EXECUTING':
+    case 'PLANNING':
       return chalk.yellow(state);
     case 'AWAITING_APPROVAL':
       return chalk.magenta(state);
+    case 'COMPLETED':
+      return chalk.green(state);
+    case 'FAILED':
+      return chalk.red(state);
+    case 'CANCELLED':
+      return chalk.gray(state);
     default:
       return chalk.gray(state);
   }

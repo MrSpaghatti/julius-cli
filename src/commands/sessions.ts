@@ -98,7 +98,13 @@ export function createSessionsCommands(): Command {
       }
 
       let result;
-      if (options.all) {
+      const hasFilters = !!options.repo || (options.state && options.state.length > 0);
+      const shouldFetchAll = options.all || hasFilters;
+
+      if (shouldFetchAll) {
+        if (hasFilters && !options.all && options.format === 'pretty') {
+          console.log('Fetching all pages for accurate filtering...');
+        }
         result = await fetchAllPages((token, size) => api.list(size, token), 100);
       } else {
         result = await api.list(pageSize, options.pageToken);
@@ -127,7 +133,7 @@ export function createSessionsCommands(): Command {
           output(session, 'pretty', 'session');
         }
         console.log(`Total: ${filteredItems.length} sessions`);
-        if (!options.all && result.nextPageToken) {
+        if (!shouldFetchAll && result.nextPageToken) {
           console.log(`\nNext page: jules-cli sessions list --page-token ${result.nextPageToken}`);
         }
       } else {

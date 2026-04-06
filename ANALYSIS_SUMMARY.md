@@ -44,10 +44,9 @@ Conducted comprehensive analysis of project implementation vs. plan, identifying
 - JSON/pretty/quiet output formats working
 
 ### Gaps Identified 📋
-- **Missing Features:** wait/poll commands, config commands, table output
-- **No Tests:** 0% coverage, empty test directories
-- **Security:** API keys in plaintext (not OS keychain)
-- **Filtering:** Client-side filtering not implemented
+- **No Integration Tests:** Only unit tests currently exist
+- **Security:** Requires OS keychain for API keys (implemented in 0.2.0)
+- **Filtering:** Client-side filtering can be improved
 - **Documentation:** Some plan items never built
 
 ### False Positives 🔍

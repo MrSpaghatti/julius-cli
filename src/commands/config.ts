@@ -71,15 +71,18 @@ export function createConfigCommands(): Command {
     .description('Get a configuration value')
     .argument('<key>', 'Configuration key')
     .option('--format <format>', 'Output format (json|pretty|quiet)', 'json')
-    .action(async (key: string, options: { format: OutputFormat }) => {
+    .option('--show', 'Show sensitive values unmasked (e.g., apiKey)')
+    .action(async (key: string, options: { format: OutputFormat, show?: boolean }) => {
       let value;
       if (key === 'apiKey') {
         value = await config.getApiKey();
-        // Mask it even in 'get' if it's the full key, or just show masked
-        if (value && value.length > 8) {
-          value = `${value.substring(0, 4)}...${value.substring(value.length - 4)}`;
-        } else if (value) {
-          value = '********';
+        if (!options.show) {
+          // Mask it even in 'get' if it's the full key, or just show masked
+          if (value && value.length > 8) {
+            value = `${value.substring(0, 4)}...${value.substring(value.length - 4)}`;
+          } else if (value) {
+            value = '********';
+          }
         }
       } else {
         value = config.get(key as keyof CLIConfig);

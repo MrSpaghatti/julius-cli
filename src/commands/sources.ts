@@ -3,7 +3,7 @@ import { config } from '../config/index.js';
 import { JulesAPIClient } from '../api/client.js';
 import { SourcesAPI } from '../api/sources.js';
 import { output } from '../output/formatter.js';
-import { AuthError } from '../utils/errors.js';
+import { AuthError, InvalidArgsError } from '../utils/errors.js';
 import { fetchAllPages } from '../utils/pagination.js';
 import type { OutputFormat } from '../api/types.js';
 
@@ -38,7 +38,7 @@ export function createSourcesCommands(): Command {
 
       const pageSize = parseInt(options.pageSize, 10);
       if (isNaN(pageSize) || pageSize < 1 || pageSize > 100) {
-        throw new Error('Page size must be between 1 and 100');
+        throw new InvalidArgsError('Page size must be between 1 and 100');
       }
 
       let result;

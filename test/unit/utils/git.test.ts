@@ -35,6 +35,13 @@ describe('inferGitHubRepo', () => {
     expect(result).toBe('owner/repo');
   });
 
+  it('should infer repo with dots in the name', () => {
+    getRemoteUrlSpy.mockReturnValue('https://github.com/owner/my.repo.name.git');
+    
+    const result = inferGitHubRepo();
+    expect(result).toBe('owner/my.repo.name');
+  });
+
   it('should throw InvalidArgsError if git fails', () => {
     getRemoteUrlSpy.mockImplementation(() => {
       throw new Error('git not found');

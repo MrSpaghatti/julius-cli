@@ -114,12 +114,36 @@ jules-cli sessions list \
 jules-cli sessions get <session-id>
 ```
 
+### Wait/Poll
+
+```bash
+# Block until a session completes (or fails/cancels)
+jules-cli wait <session-id>
+
+# Block and stream real-time activity updates
+jules-cli wait <session-id> --follow
+```
+
+### Configuration
+
+```bash
+# Set configuration values (apiKey, apiEndpoint, defaultFormat, defaultPageSize)
+jules-cli config set defaultFormat table
+
+# Get a configuration value
+jules-cli config get defaultFormat
+
+# List all configuration values
+jules-cli config list
+```
+
 ## Output Formats
 
 All commands support multiple output formats via the `--format` flag:
 
 - `json` (default) - Structured JSON output for parsing
 - `pretty` - Human-readable colored output
+- `table` - Clean tabular display for lists
 - `quiet` - Suppress output (useful for scripting)
 
 ```bash
@@ -129,8 +153,32 @@ jules-cli sessions list
 # Pretty output with colors
 jules-cli sessions list --format pretty
 
+# Table output
+jules-cli sources list --format table
+
 # Quiet mode (no output)
 jules-cli auth set $API_KEY --format quiet
+```
+
+## Pagination & Filtering
+
+List commands (`sessions list`, `sources list`, `activities list`) support pagination:
+
+```bash
+# List a specific number of results
+jules-cli sessions list --page-size 10
+
+# Fetch the next page using a token
+jules-cli sessions list --page-token <token>
+
+# Automatically fetch all pages (useful with --format table)
+jules-cli sessions list --all
+```
+
+Client-side filtering automatically implies `--all` to ensure complete results:
+
+```bash
+jules-cli sessions list --state COMPLETED
 ```
 
 ## Configuration

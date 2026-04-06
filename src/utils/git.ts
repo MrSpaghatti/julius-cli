@@ -38,7 +38,7 @@ export function inferGitHubRepo(): string {
       repoPath = remoteUrl.replace('git@github.com:', '');
     } else {
       // Try to match anything that looks like github.com/owner/repo
-      const match = remoteUrl.match(/github\.com[/:]([^/]+\/[^/.]+)/);
+      const match = remoteUrl.match(/github\.com[/:]([^/]+\/[^\s/]+?)(?:\.git)?$/);
       if (match) {
         repoPath = match[1];
       }

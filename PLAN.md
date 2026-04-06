@@ -2,9 +2,8 @@
 
 > **IMPLEMENTATION NOTE (2026-04-06):** This document represents the original comprehensive plan.  
 > The current implementation (v0.1.0) covers ~85% of Phase 1-2 features. See STATUS.md for actual implementation status.  
-> Notable deviations: keytar-rs not used (using conf for plaintext storage), wait/config commands not yet implemented,  
+> Notable deviations: cross-keychain used for secure API key storage,
 > auth/ directory structure consolidated into commands/auth.ts.
-
 ## Executive Summary
 
 Build a TypeScript CLI tool that wraps the Jules REST API for programmatic control by AI agents (Claude, Copilot, Gemini, etc.). Unlike the official `@google/jules` CLI which focuses on human interaction with TUIs, this tool provides JSON-first output, full API coverage, and non-interactive commands optimized for automation and AI agent workflows.
@@ -1374,4 +1373,6 @@ echo "Sessions created: $((${#REPOS[@]} - FAILED)) succeeded, $FAILED failed"
 - Official Jules CLI: https://jules.google/docs/cli/reference
 - Commander.js Docs: https://github.com/tj/commander.js
 - Axios Docs: https://axios-http.com/
+- Node.js Best Practices: https://github.com/goldbergyoni/nodebestpractices
+tps://axios-http.com/
 - Node.js Best Practices: https://github.com/goldbergyoni/nodebestpractices

@@ -50,7 +50,13 @@ export function createActivitiesCommands(): Command {
       }
 
       let result;
-      if (options.all) {
+      const hasFilters = !!options.author || (options.type && options.type.length > 0);
+      const shouldFetchAll = options.all || hasFilters;
+
+      if (shouldFetchAll) {
+        if (hasFilters && !options.all && options.format === 'pretty') {
+          console.log('Fetching all pages for accurate filtering...');
+        }
         result = await fetchAllPages((token, size) => api.list(sessionId, size, token), 100);
       } else {
         result = await api.list(sessionId, pageSize, options.pageToken);
@@ -78,7 +84,7 @@ export function createActivitiesCommands(): Command {
           output(activity, 'pretty', 'activity');
         }
         console.log(`Total: ${filteredItems.length} activities`);
-        if (!options.all && result.nextPageToken) {
+        if (!shouldFetchAll && result.nextPageToken) {
           console.log(
             `\nNext page: jules-cli activities list ${sessionId} --page-token ${result.nextPageToken}`
           );

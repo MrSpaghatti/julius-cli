@@ -3,6 +3,7 @@ import { config } from '../config/index.js';
 import { output } from '../output/formatter.js';
 import { AuthError } from '../utils/errors.js';
 import { JulesAPIClient } from '../api/client.js';
+import { SourcesAPI } from '../api/sources.js';
 import type { OutputFormat } from '../api/types.js';
 
 export function createAuthCommands(): Command {
@@ -49,12 +50,25 @@ export function createAuthCommands(): Command {
         return;
       }
 
+      // Ping the API to ensure the key is valid
+      let valid = false;
+      let error = null;
+      try {
+        const client = new JulesAPIClient(apiKey, endpoint);
+        const api = new SourcesAPI(client);
+        await api.list(1); // Fetch just 1 item to verify authentication
+        valid = true;
+      } catch (err: any) {
+        error = err.message;
+      }
+
       output(
         {
-          authenticated: true,
+          authenticated: valid,
           source,
           endpoint,
-          note: 'Run "jules-cli sources list" to verify API key connectivity.',
+          error,
+          note: valid ? 'API key is valid.' : 'API key is present but invalid or API is unreachable.',
         },
         options.format
       );
