@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-04-06
+
+### Added
+- `wait` command for blocking until session reaches a terminal state
+- `--follow` flag for `wait` command to stream activity updates in real-time
+- `config` command group for managing CLI configuration:
+  - `config set <key> <value>` to update settings
+  - `config get <key>` to retrieve a setting
+  - `config list` to view all configuration (with masked API key)
+  - `config reset` to restore defaults
+- Support for `pollInterval` and `maxPollAttempts` configuration
+
+### Fixed
+- Build error in `src/commands/wait-cli.ts` due to incorrect config import
+- Masked sensitive information (API key) in `config list` output
+
 ## [0.1.0] - 2026-04-06
 
 ### Added

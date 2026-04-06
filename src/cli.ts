@@ -3,6 +3,8 @@ import { createAuthCommands } from './commands/auth.js';
 import { createSourcesCommands } from './commands/sources.js';
 import { createSessionsCommands } from './commands/sessions.js';
 import { createActivitiesCommands } from './commands/activities.js';
+import { createWaitCommand } from './commands/wait-cli.js';
+import { createConfigCommands } from './commands/config.js';
 import { handleError } from './utils/errors.js';
 
 export const cli = new Command();
@@ -21,6 +23,8 @@ cli.addCommand(createAuthCommands());
 cli.addCommand(createSourcesCommands());
 cli.addCommand(createSessionsCommands());
 cli.addCommand(createActivitiesCommands());
+cli.addCommand(createWaitCommand());
+cli.addCommand(createConfigCommands());
 
 // Error handling
 cli.exitOverride();

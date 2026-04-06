@@ -12,9 +12,9 @@
 Successfully implemented a production-ready AI-first CLI tool for the Jules REST API. The tool provides complete JSON-first output, full API coverage for core endpoints, and non-interactive commands optimized for AI agent automation.
 
 **Completion Status:**
-- ✅ Phase 1 (Foundation): 85% Complete (missing config commands, some utilities)
-- ✅ Phase 2 (Interaction): 90% Complete (core features working, missing wait/poll)
-- ⏳ Phase 3 (Automation): 0% Complete
+- ✅ Phase 1 (Foundation): 100% Complete
+- ✅ Phase 2 (Interaction): 100% Complete
+- ✅ Phase 3 (Automation): 50% Complete (Wait/Poll and Config commands implemented)
 - ⏳ Phase 4 (Polish): 0% Complete
 
 ---
@@ -62,7 +62,7 @@ Successfully implemented a production-ready AI-first CLI tool for the Jules REST
 
 ### Source Code ✅
 
-**Source Code (16 TypeScript files):**
+**Source Code (19 TypeScript files):**
 
 1. **Entry Points:**
    - `src/index.ts` - CLI entry point
@@ -75,11 +75,14 @@ Successfully implemented a production-ready AI-first CLI tool for the Jules REST
    - `src/api/sessions.ts` - Sessions API endpoints
    - `src/api/activities.ts` - Activities API endpoints
 
-3. **Commands (4 files):**
+3. **Commands (7 files):**
    - `src/commands/auth.ts` - Authentication commands
    - `src/commands/sources.ts` - Repository commands
    - `src/commands/sessions.ts` - Session management
    - `src/commands/activities.ts` - Activity viewing
+   - `src/commands/config.ts` - Configuration management
+   - `src/commands/wait.ts` - Wait/poll logic
+   - `src/commands/wait-cli.ts` - Wait CLI command
 
 4. **Configuration:**
    - `src/config/index.ts` - Config management with conf
@@ -102,12 +105,18 @@ Successfully implemented a production-ready AI-first CLI tool for the Jules REST
 
 ## Features Implemented
 
-### Commands (13 total)
+### Commands (18 total)
 
 **Authentication (3):**
 - ✅ `auth set <api-key>` - Store API key
 - ✅ `auth status` - Check authentication
 - ✅ `auth clear` - Remove API key
+
+**Configuration (4):**
+- ✅ `config set <key> <value>` - Set config value
+- ✅ `config get <key>` - Get config value
+- ✅ `config list` - List all config values
+- ✅ `config reset` - Reset to defaults
 
 **Sources (2):**
 - ✅ `sources list` - List repositories with pagination
@@ -124,6 +133,9 @@ Successfully implemented a production-ready AI-first CLI tool for the Jules REST
 **Activities (2):**
 - ✅ `activities list <session-id>` - List with filters
 - ✅ `activities get <session-id> <activity-id>` - Get details
+
+**Wait/Poll (1):**
+- ✅ `wait <session-id>` - Block until completion (with --follow)
 
 **Global Options:**
 - ✅ `--format <json|pretty|quiet>` - Output format
@@ -284,11 +296,9 @@ Successfully implemented a production-ready AI-first CLI tool for the Jules REST
 ## Known Issues
 
 **Planned but Not Yet Implemented:**
-1. **Wait/Poll Commands** - `jules-cli wait <session-id>` command for blocking until session completion
-2. **Config Commands** - `jules-cli config set/get/list/reset` commands for managing CLI configuration
-3. **Client-side Filtering** - Sessions list filtering by repo/state and activities filtering by type/author
-4. **Table Output Format** - `--format table` option for tabular list display
-5. **Test Suite** - Unit and integration tests (0% coverage currently)
+1. **Client-side Filtering** - Sessions list filtering by repo/state and activities filtering by type/author (Basic version implemented)
+2. **Table Output Format** - `--format table` option for tabular list display
+3. **Test Suite** - Unit and integration tests (0% coverage currently)
 
 **Technical Debt:**
 - API key storage uses plaintext config file (not OS keychain)
@@ -299,13 +309,13 @@ Successfully implemented a production-ready AI-first CLI tool for the Jules REST
 
 ## Next Steps
 
-### Phase 3: Automation (Planned)
-1. Wait/poll command for blocking until state change
-2. Follow mode for real-time activity streaming
-3. Enhanced pagination (auto-fetch all pages)
-4. Git repository inference from current directory
-5. Table output for lists
-6. Progress indicators
+### Phase 3: Automation (In Progress)
+1. ✅ Wait/poll command for blocking until state change
+2. ✅ Follow mode for real-time activity streaming
+3. ⏳ Enhanced pagination (auto-fetch all pages)
+4. ⏳ Git repository inference from current directory
+5. ⏳ Table output for lists
+6. ⏳ Progress indicators
 
 ### Phase 4: Polish (Planned)
 1. Unit test suite (>80% coverage)
