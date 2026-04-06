@@ -5,7 +5,9 @@ This document tracks all testing performed on jules-cli-but-better.
 ## Test Status: Phase 1 & 2 Manual Testing Complete ✅
 
 **Last Updated:** 2026-04-06  
-**Test Environment:** Linux (Ubuntu/Debian), Node.js v25.9.0
+**Test Environment:** Linux (Ubuntu/Debian), Node.js v25.9.0 (non-LTS)  
+**Note:** Production use should test on Node.js LTS versions (18.x or 20.x)  
+**Unit Test Coverage:** 0% (no automated tests written yet)
 
 ---
 

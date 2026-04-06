@@ -14,13 +14,30 @@ Unlike the official `@google/jules` CLI which focuses on human interaction with 
 
 ## Installation
 
+**Note:** This package is not yet published to npm. For now, install locally:
+
 ```bash
-npm install -g jules-cli-but-better
+# Clone the repository
+git clone <repository-url>
+cd jules-cli-but-better
+
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
+
+# Link globally for local development
+npm link
+
+# Or run directly
+./dist/index.js <command>
 ```
 
-Or run directly with npx:
-
+Once published, you'll be able to install with:
 ```bash
+npm install -g jules-cli-but-better
+# or
 npx jules-cli-but-better <command>
 ```
 

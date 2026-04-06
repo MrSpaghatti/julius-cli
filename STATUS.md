@@ -12,8 +12,8 @@
 Successfully implemented a production-ready AI-first CLI tool for the Jules REST API. The tool provides complete JSON-first output, full API coverage for core endpoints, and non-interactive commands optimized for AI agent automation.
 
 **Completion Status:**
-- ✅ Phase 1 (Foundation): 100% Complete
-- ✅ Phase 2 (Interaction): 100% Complete
+- ✅ Phase 1 (Foundation): 85% Complete (missing config commands, some utilities)
+- ✅ Phase 2 (Interaction): 90% Complete (core features working, missing wait/poll)
 - ⏳ Phase 3 (Automation): 0% Complete
 - ⏳ Phase 4 (Polish): 0% Complete
 
@@ -62,7 +62,7 @@ Successfully implemented a production-ready AI-first CLI tool for the Jules REST
 
 ### Source Code ✅
 
-**Core Files (20 TypeScript files):**
+**Source Code (16 TypeScript files):**
 
 1. **Entry Points:**
    - `src/index.ts` - CLI entry point
@@ -102,7 +102,7 @@ Successfully implemented a production-ready AI-first CLI tool for the Jules REST
 
 ## Features Implemented
 
-### Commands (15 total)
+### Commands (13 total)
 
 **Authentication (3):**
 - ✅ `auth set <api-key>` - Store API key
@@ -210,9 +210,9 @@ Successfully implemented a production-ready AI-first CLI tool for the Jules REST
 
 | Metric | Count |
 |--------|-------|
-| TypeScript files | 20 |
-| Total lines of code | ~2,000 |
-| Commands | 15 |
+| TypeScript files | 16 |
+| Total lines of code | ~1,800 |
+| Commands | 13 |
 | API endpoints | 10 |
 | Error types | 7 |
 | Exit codes | 8 |
@@ -231,13 +231,13 @@ Successfully implemented a production-ready AI-first CLI tool for the Jules REST
 ## Dependencies
 
 ### Production (7)
-- commander@11.1.0 - CLI framework
-- axios@1.6.0 - HTTP client
-- axios-retry@4.0.0 - Retry logic
-- conf@12.0.0 - Configuration
+- commander@12.1.0 - CLI framework
+- axios@1.14.0 - HTTP client
+- axios-retry@4.5.0 - Retry logic
+- conf@13.0.1 - Configuration
 - chalk@5.3.0 - Colors
-- cli-table3@0.6.3 - Tables
-- ora@8.0.0 - Spinners
+- cli-table3@0.6.5 - Tables
+- ora@8.2.0 - Spinners
 
 ### Development (10)
 - typescript@5.3.0 - Compiler
@@ -283,7 +283,17 @@ Successfully implemented a production-ready AI-first CLI tool for the Jules REST
 
 ## Known Issues
 
-**None identified** in Phase 1 & 2 implementation.
+**Planned but Not Yet Implemented:**
+1. **Wait/Poll Commands** - `jules-cli wait <session-id>` command for blocking until session completion
+2. **Config Commands** - `jules-cli config set/get/list/reset` commands for managing CLI configuration
+3. **Client-side Filtering** - Sessions list filtering by repo/state and activities filtering by type/author
+4. **Table Output Format** - `--format table` option for tabular list display
+5. **Test Suite** - Unit and integration tests (0% coverage currently)
+
+**Technical Debt:**
+- API key storage uses plaintext config file (not OS keychain)
+- No automated testing infrastructure
+- Sessions cancel endpoint not verified with live API
 
 ---
 
