@@ -85,7 +85,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
       if (follow) {
         try {
           let newActivities: Activity[] = [];
-          let pollToken = currentToken;
+          let pollToken: string | undefined = currentToken;
 
           while (true) {
             const result = await activitiesAPI.list(sessionId, 100, pollToken);

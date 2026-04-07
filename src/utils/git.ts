@@ -75,8 +75,25 @@ export function pullSessionChanges(repo: string, branchName: string): void {
       );
       gitProvider.execInherit(['checkout', branchName]);
     } else {
+      let fetchRef = `${branchName}:${branchName}`;
+      const prMatch = branchName.match(/^(?:pr|mr)\/(\d+)$/i);
+      
+      if (prMatch) {
+        const id = prMatch[1];
+        const provider = repo.split('/')[0];
+        
+        if (provider === 'gitlab') {
+          fetchRef = `refs/merge-requests/${id}/head:${branchName}`;
+        } else if (provider === 'bitbucket') {
+          fetchRef = `refs/pull-requests/${id}/from:${branchName}`;
+        } else {
+          // Default to GitHub
+          fetchRef = `refs/pull/${id}/head:${branchName}`;
+        }
+      }
+
       // Try to fetch from the specified remote
-      gitProvider.execInherit(['fetch', remote, `${branchName}:${branchName}`]);
+      gitProvider.execInherit(['fetch', remote, fetchRef]);
       gitProvider.execInherit(['checkout', branchName]);
     }
 

@@ -2,23 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.6.0] - Planned
+## [0.7.0] - 2026-04-07
 
 ### Added
-- **Google OAuth 2.0 Support**: New `auth login` command for Google account authentication alongside existing API key flow.
-  - Browser-based flow: opens consent screen in default browser, captures token via loopback redirect.
-  - Device code flow: `auth login --device-code` for headless/SSH environments.
-  - Automatic token refresh — expired access tokens are refreshed transparently before each API call.
-- **`auth logout`**: New subcommand (alias for `auth clear`) to remove all stored credentials.
-- **Auth method resolution**: Priority chain — `JULES_OAUTH_TOKEN` env var → `JULES_API_KEY` env var → OAuth tokens → API key.
-- **Updated `auth status`**: Shows active auth method (`apikey` / `oauth`), token expiry, and user identity for OAuth sessions.
+- **Interactive Mode (REPL) Overhaul**:
+  - In-process command execution for significantly faster performance.
+  - Macro support: define sequences with `macro <name> <cmd...>` and run with `!<name>`.
+  - Basic tab-completion for root commands.
+  - Better signal handling: Ctrl+C clears the current line instead of exiting.
+- **Multi-Provider Parity**:
+  - Full support for GitLab and Bitbucket alongside GitHub.
+  - Enhanced `sessions pull` to support GitLab Merge Requests and Bitbucket Pull Requests fetch patterns.
+  - Provider-specific token support via environment variables (`JULES_GITHUB_API_KEY`, etc.).
+- **Template Management**:
+  - `templates create`: Interactive prompt to create new templates.
+  - `templates edit`: Modify existing templates.
+  - `templates delete`: Remove templates.
+  - `templates import`: Bulk load templates from JSON.
 
 ### Changed
-- `JulesAPIClient` constructor now accepts a `TokenProvider` interface instead of a raw API key string, enabling both API key and OAuth token modes.
-- `auth clear` now removes both API key and OAuth tokens.
+- Improved `--repo` inference to correctly identify providers from local git remotes.
+- Refactored `src/utils/client.ts` with `ProviderTokenWrapper` for extensible header injection.
 
-### New Dependencies
-- `google-auth-library` — Google's official Node.js client for OAuth2/token exchange.
+## [0.6.0] - 2026-04-07
+
+### Added
+- **Rebranding**: Project renamed from `jules-cli` to `julius-cli`.
+- **Google OAuth 2.0 Support**: New `auth login` command for Google account authentication.
+  - Browser-based flow and Device code flow.
+  - Automatic token refresh.
+- **Secure Storage**: Sensitive credentials stored in the system keychain.
+- **Robust Tailing**: Fixed activity streaming in `wait --follow`.
+- **Standardized Configuration**: Uniform handling of API URLs and endpoints.
+
+### Changed
+- `JulesAPIClient` constructor updated for `TokenProvider`.
+- `auth clear` removes both API key and OAuth tokens.
 
 ## [0.5.1] - 2026-04-06
 

@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import * as readline from 'node:readline/promises';
+import * as readline from 'node:readline';
 import { stdin as input, stdout as output } from 'node:process';
 import chalk from 'chalk';
 import { cli } from '../cli.js';
@@ -21,84 +21,132 @@ export function createInteractiveCommand(): Command {
         }
       }
 
+      const context: Record<string, any> = {
+        lastSessionId: undefined,
+      };
+
+      const macros: Record<string, string[]> = {};
+
       console.log(chalk.blue.bold('\n--- Jules CLI Interactive Mode ---'));
       console.log(chalk.gray('Type "help" for commands, "exit" to quit.'));
+      console.log(chalk.gray('Macros: "macro <name> <cmd...>" to define, "!<name>" to run.'));
       if (currentRepo) {
         console.log(chalk.gray(`Default repo: ${chalk.cyan(currentRepo)}`));
       }
       console.log('');
 
-      const rl = readline.createInterface({ input, output });
+      const getCommandNames = () => {
+        return cli.commands.map(cmd => cmd.name()).concat(['exit', 'quit', 'repo', 'macro']);
+      };
 
-      while (true) {
-        const prompt = currentRepo ? `julius-cli [${currentRepo}] > ` : 'julius-cli > ';
-        const line = await rl.question(chalk.green.bold(prompt));
-        const trimmed = line.trim();
+      const completer = (line: string) => {
+        const hits = getCommandNames().filter(c => c.startsWith(line));
+        return [hits.length ? hits : getCommandNames(), line];
+      };
 
-        if (trimmed === 'exit' || trimmed === 'quit') {
-          break;
+      const rl = readline.createInterface({
+        input,
+        output,
+        completer,
+        prompt: ''
+      });
+
+      let isCommandRunning = false;
+
+      rl.on('SIGINT', () => {
+        if (isCommandRunning) {
+          console.log(chalk.yellow('\n[Ctrl+C received. Command is running...]'));
+        } else {
+          rl.write(null, { ctrl: true, name: 'u' }); // Clear line
+          console.log();
+          const promptText = currentRepo ? `julius-cli [${currentRepo}] > ` : 'julius-cli > ';
+          process.stdout.write(chalk.green.bold(promptText));
         }
+      });
 
-        if (trimmed === '') {
-          continue;
-        }
-
-        if (trimmed.startsWith('repo ')) {
-          currentRepo = trimmed.substring(5).trim();
-          console.log(chalk.gray(`Default repo set to: ${chalk.cyan(currentRepo)}`));
-          continue;
-        }
-
-        // SECURITY: Validate command against allowlist to prevent command injection
-        const ALLOWED_COMMANDS = new Set([
-          'sessions', 's',
-          'activities', 'a',
-          'auth',
-          'sources',
-          'wait',
-          'config',
-          'templates',
-          'listen',
-        ]);
-
-        const parts = trimmed.split(/\s+/);
-        const command = parts[0];
-
-        if (!ALLOWED_COMMANDS.has(command)) {
-          console.error(chalk.red(`Unknown command: ${command}`));
-          console.log(chalk.gray('Supported commands: ' + Array.from(ALLOWED_COMMANDS).join(', ')));
-          console.log('');
-          continue;
-        }
-
+      const executeCommand = async (parts: string[]) => {
+        isCommandRunning = true;
         try {
-          console.log(chalk.gray(`Executing: ${trimmed}`));
-
-          const { spawn } = await import('node:child_process');
-          await new Promise<void>((resolve) => {
-            const scriptPath = process.argv[1];
-            if (!scriptPath || !scriptPath.length) {
-              console.error(chalk.red('Cannot determine script path'));
-              resolve();
-              return;
-            }
-
-            // Spawn subprocess with user input as arguments
-            // Node's spawn handles argument escaping safely
-            const cp = spawn('node', [scriptPath, ...parts], { stdio: 'inherit' });
-            cp.on('close', () => resolve());
-            cp.on('error', (err) => {
-              console.error(chalk.red(`Failed to execute command: ${err.message}`));
-              resolve();
-            });
-          });
+          // Using parseAsync in-process. 
+          await cli.parseAsync(parts, { from: 'user' });
         } catch (err: any) {
-          console.error(chalk.red(`Error: ${err.message}`));
+          if (err.code === 'commander.helpDisplayed' || err.code === 'commander.help' || err.code === 'commander.version' || err.code === 'commander.unknownCommand') {
+            // expected commander errors that should not crash the REPL
+          } else {
+            console.error(chalk.red(`Error: ${err.message}`));
+          }
+        } finally {
+          isCommandRunning = false;
         }
-        console.log('');
-      }
+      };
 
-      rl.close();
-      console.log(chalk.blue('Goodbye!'));
+      const ask = (promptText: string): Promise<string> => {
+        return new Promise((resolve) => {
+          rl.question(chalk.green.bold(promptText), resolve);
+        });
+      };
+
+      const loop = async () => {
+        while (true) {
+          const promptText = currentRepo ? `julius-cli [${currentRepo}] > ` : 'julius-cli > ';
+          const line = await ask(promptText);
+          const trimmed = line.trim();
+
+          if (trimmed === 'exit' || trimmed === 'quit') {
+            break;
+          }
+
+          if (trimmed === '') {
+            continue;
+          }
+
+          if (trimmed.startsWith('repo ')) {
+            currentRepo = trimmed.substring(5).trim();
+            console.log(chalk.gray(`Default repo set to: ${chalk.cyan(currentRepo)}`));
+            continue;
+          }
+
+          if (trimmed.startsWith('macro ')) {
+            const parts = trimmed.substring(6).trim().split(/\s+/);
+            const macroName = parts[0];
+            const macroCmd = parts.slice(1);
+            if (!macroName || macroCmd.length === 0) {
+              console.error(chalk.red('Usage: macro <name> <command...>'));
+            } else {
+              macros[macroName] = macroCmd;
+              console.log(chalk.gray(`Macro '${macroName}' saved. Run with !${macroName}`));
+            }
+            continue;
+          }
+
+          let parts = trimmed.split(/\s+/);
+
+          if (parts[0].startsWith('!')) {
+            const macroName = parts[0].substring(1);
+            if (macros[macroName]) {
+              parts = [...macros[macroName], ...parts.slice(1)];
+              console.log(chalk.gray(`Expanded macro: ${parts.join(' ')}`));
+            } else {
+              console.error(chalk.red(`Unknown macro: ${macroName}`));
+              continue;
+            }
+          }
+
+          const command = parts[0];
+
+          if (command === 'interactive' || command === 'i') {
+            console.error(chalk.red(`Already in interactive mode.`));
+            continue;
+          }
+
+          await executeCommand(parts);
+          console.log('');
+        }
+
+        rl.close();
+        console.log(chalk.blue('Goodbye!'));
+      };
+
+      await loop();
     });
 }

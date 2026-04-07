@@ -1,6 +1,6 @@
 # Julius CLI Status
 
-**Version:** 0.6.0  
+**Version:** 0.7.0  
 **Status:** Stable / Production-Ready  
 **Last Updated:** 2026-04-07
 
@@ -8,30 +8,31 @@
 
 Julius CLI is an AI-first command-line tool designed for the Jules REST API. It provides a robust, JSON-centric interface for managing AI-driven sessions, activities, and prompt templates, with a focus on automation and security.
 
+## Recent Achievements (v0.7.0) ✅
+
+- **Interactive Mode (REPL) Overhaul:** Refactored REPL to execute commands in-process using Commander's internal APIs for much faster performance. Added macro support (`macro <name> <cmd...>`, `!<name>`) and basic tab-completion.
+- **Multi-Provider Parity:** Expanded support beyond GitHub to include GitLab and Bitbucket.
+  - **Improved Git Fetching:** `sessions pull` now correctly handles GitLab Merge Requests and Bitbucket Pull Requests.
+  - **Provider-Specific Tokens:** Support for `JULES_GITHUB_API_KEY`, `JULES_GITLAB_API_KEY`, and `JULES_BITBUCKET_API_KEY` for multi-tenant environments.
+- **Template Management:** Added subcommands to create, edit, delete, and import prompt templates locally.
+- **Robust Repository Inference:** Improved `--repo` flag handling to automatically infer the provider from local git configuration when not explicitly provided.
+
 ## Recent Achievements (v0.6.0) ✅
 
 - **Rebranded:** Project renamed from `jules-cli` to `julius-cli` for a cleaner identity.
 - **Google OAuth 2.0:** Full support for OAuth 2.0 with PKCE (browser flow) and Device Code flow.
 - **Secure Storage:** All sensitive credentials (API keys, OAuth client secrets, and tokens) are stored in the system keychain.
-- **Robust Tailing:** Fixed activity streaming in `wait --follow` to be reliable across polling cycles.
-- **Standardized Configuration:** Uniform handling of `JULES_API_URL` and `JULES_API_ENDPOINT` environment variables.
-- **Improved Pagination:** Decoupled filtering from automatic fetching of all pages for better control.
-- **Streaming Table Output:** Optimized table formatting for continuous activity updates.
 
 ## Current Features 🚀
 
-- **Authentication:** Dual support for API keys and Google OAuth 2.0.
-- **Session Management:** Create, list, get, approve, and cancel AI sessions.
+- **Authentication:** Triple support for API keys, Google OAuth 2.0, and provider-specific tokens.
+- **Session Management:** Create, list, get, approve, and cancel AI sessions across GitHub, GitLab, and Bitbucket.
 - **Activity Monitoring:** Real-time tailing of session progress via polling or webhooks.
-- **Git Integration:** Infer repository context from local `.git` config and pull session-generated changes.
-- **Prompt Templates:** Reusable, variable-based templates for consistent task execution.
-- **Webhook Listener:** Local server with HMAC signature verification and rate limiting.
-- **Interactive Mode:** REPL for executing commands without repeating the binary name.
-- **Flexible Output:** Support for JSON, Pretty, Quiet, and Table formats across all commands.
+- **Interactive Mode:** Advanced REPL with macros and repository context persistence.
+- **Prompt Templates:** Reusable, variable-based templates with local management commands.
 
 ## Roadmap 🗺️
 
-- **v0.7.0 (Upcoming):** Improved Interactive Mode (in-process command execution) and expanded multi-provider (GitLab/Bitbucket) parity.
 - **v0.8.0:** Multi-session orchestration and batch commands.
 - **v1.0.0:** Final stability release and public documentation portal.
 

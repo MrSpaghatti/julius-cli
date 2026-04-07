@@ -161,8 +161,17 @@ export function createSessionsCommands(): Command {
               // provider/owner/repo
               filters.push(`source = "sources/${options.repo}"`);
             } else if (parts.length === 2) {
-              // owner/repo (default to github for backward compatibility or infer)
-              filters.push(`source = "sources/github/${options.repo}"`);
+              // owner/repo
+              let provider = 'github';
+              try {
+                const inferred = inferRepo();
+                if (inferred.repo === options.repo) {
+                  provider = inferred.provider;
+                }
+              } catch {
+                // Ignore
+              }
+              filters.push(`source = "sources/${provider}/${options.repo}"`);
             }
           } else {
              filters.push(`source = "sources/${options.repo}"`);

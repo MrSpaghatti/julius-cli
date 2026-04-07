@@ -1,4 +1,4 @@
-# julius-cli v0.6.0
+# julius-cli v0.7.0
 
 AI-first CLI for Jules REST API with JSON output and full automation support.
 
@@ -6,6 +6,7 @@ AI-first CLI for Jules REST API with JSON output and full automation support.
 
 Unlike the official `@google/jules` CLI which focuses on human interaction with TUIs, this tool provides:
 
+- **Multi-Provider Support** - Support for GitHub, GitLab, and Bitbucket.
 - **JSON-first output** - Machine-readable output for AI agents
 - **Full API coverage** - All Jules REST API endpoints accessible via CLI
 - **Non-interactive & Interactive** - Support for both automation and human-in-the-loop workflows
@@ -50,7 +51,7 @@ npx julius-cli <command>
 julius-cli auth set YOUR_API_KEY
 ```
 
-### Option B: Google OAuth (v0.6.0, planned)
+### Option B: Google OAuth (v0.6.0+)
 
 1. **Login with your Google account:**
 ```bash
@@ -79,7 +80,7 @@ julius-cli sessions create \
 julius-cli sessions get <session-id>
 ```
 
-5. **Start Interactive Mode (v0.5.0+):**
+5. **Start Interactive Mode (v0.7.0+):**
 ```bash
 julius-cli interactive --repo owner/repo
 ```
@@ -88,7 +89,7 @@ julius-cli interactive --repo owner/repo
 
 ### Interactive Mode (REPL) 🆕
 
-Maintain session context across multiple commands without re-entering common flags.
+Maintain session context across multiple commands with in-process execution (v0.7.0+).
 
 ```bash
 # Start interactive mode
@@ -99,9 +100,31 @@ julius-cli i
 ```
 
 In interactive mode:
-- Type any command (e.g., `sessions list`, `activities list <id>`)
-- Use `repo <owner/repo>` to change the default repository
-- Type `help` for commands, `exit` or `quit` to leave
+- **Fast Execution**: Commands run in-process for low latency.
+- **Macros**: Define a sequence of commands with `macro <name> <cmd...>` and run with `!<name>`.
+- **Tab-completion**: Use `<Tab>` to see available commands.
+- **Context Preservation**: Use `repo <provider/owner/repo>` to change the default repository context.
+- Type `help` for commands, `exit` or `quit` to leave.
+
+### Templates 🆕
+
+Manage session prompt templates locally (v0.7.0+).
+
+```bash
+# List templates
+julius-cli templates list
+
+# Create a template interactively
+julius-cli templates create
+
+# Edit/Delete/Import
+julius-cli templates edit <id>
+julius-cli templates delete <id>
+julius-cli templates import <file.json>
+
+# Use a template
+julius-cli templates use <id> [vars...]
+```
 
 ### Webhook Listener 🆕
 
@@ -118,7 +141,7 @@ julius-cli listen --register <session-id> --host https://your-public-url.com
 ### Sessions
 
 ```bash
-# Create a new session
+# Create a new session (auto-infers provider from git)
 julius-cli sessions create \
   --repo owner/repo \
   --prompt "Your task description" \
@@ -131,7 +154,7 @@ julius-cli sessions create \
 
 # List all sessions (now with server-side filtering)
 julius-cli sessions list \
-  [--repo owner/repo] \
+  [--repo [provider/]owner/repo] \
   [--state PENDING EXECUTING COMPLETED] \
   [--page-size 30] \
   [--page-token abc123] \
@@ -139,6 +162,9 @@ julius-cli sessions list \
 
 # Get session details
 julius-cli sessions get <session-id>
+
+# Pull session changes (now supports MR/PR formats like pr/123)
+julius-cli sessions pull <session-id>
 ```
 
 ### Wait/Poll
@@ -207,18 +233,24 @@ julius-cli sessions list --state COMPLETED --all
 
 ## Authentication
 
-Two authentication methods are supported (v0.6.0+):
+Three authentication methods are supported (v0.7.0+):
 
 | Method | Command | Best for |
 |--------|---------|----------|
 | API Key | `auth set <key>` | Simple scripts, CI/CD with API key |
 | Google OAuth | `auth login` | Interactive use, Google account access |
+| Provider-specific | Env Variables | GitLab/Bitbucket specific token injection |
 
 Auth resolution order (highest priority first):
 1. `JULES_OAUTH_TOKEN` env var — direct OAuth Bearer token
 2. `JULES_API_KEY` env var — API key
 3. Stored OAuth tokens (from `auth login`)
 4. Stored API key (from `auth set`)
+
+Additionally, provider-specific tokens can be set via environment variables:
+- `JULES_GITHUB_API_KEY`
+- `JULES_GITLAB_API_KEY`
+- `JULES_BITBUCKET_API_KEY`
 
 ### Auth Commands
 

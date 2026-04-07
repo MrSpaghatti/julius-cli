@@ -114,7 +114,7 @@ export async function runBrowserOAuthFlow(
         scope: scopes,
         state,
         code_challenge: challenge,
-        code_challenge_method: 'S256',
+        code_challenge_method: 'S256' as any,
       });
 
       console.log('Opening browser for authentication...');
