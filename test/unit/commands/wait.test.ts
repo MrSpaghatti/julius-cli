@@ -21,14 +21,8 @@ jest.unstable_mockModule('../../../src/output/formatter.js', () => ({
   output: jest.fn(),
 }));
 
-// Mock pagination
-jest.unstable_mockModule('../../../src/utils/pagination.js', () => ({
-  fetchAllPages: jest.fn(),
-}));
-
 const { waitCommand } = await import('../../../src/commands/wait.js');
 const { output } = await import('../../../src/output/formatter.js');
-const { fetchAllPages } = await import('../../../src/utils/pagination.js');
 
 describe('waitCommand', () => {
   const client = {} as any;
@@ -79,22 +73,32 @@ describe('waitCommand', () => {
       .mockResolvedValueOnce({ id: '123', state: 'EXECUTING' })
       .mockResolvedValueOnce({ id: '123', state: 'COMPLETED' });
 
-    (fetchAllPages as any).mockResolvedValueOnce({
-      items: [{ id: 'a1', type: 'MESSAGE', content: 'hello' }]
+    (mockActivitiesAPI.list as any).mockResolvedValueOnce({
+      items: [{ id: 'a1', type: 'MESSAGE', content: 'hello', createTime: '2026-04-06T20:00:00Z' }],
+      nextPageToken: 'token1'
+    }).mockResolvedValueOnce({
+      items: [],
+      nextPageToken: undefined
     });
-    (fetchAllPages as any).mockResolvedValueOnce({
-      items: [
-        { id: 'a1', type: 'MESSAGE', content: 'hello' },
-        { id: 'a2', type: 'PROGRESS', content: 'done' }
-      ]
+    
+    (mockActivitiesAPI.list as any).mockResolvedValueOnce({
+      items: [{ id: 'a2', type: 'PROGRESS', content: 'done', createTime: '2026-04-06T20:05:00Z' }],
+      nextPageToken: undefined
     });
 
     const waitPromise = waitCommand(client, { sessionId: '123', interval: 1, follow: true });
 
+    // First interval
     await jest.advanceTimersByTimeAsync(1000);
+    // Allow promises to resolve
+    await Promise.resolve();
+    
     expect(output).toHaveBeenCalledWith(expect.objectContaining({ id: 'a1' }), 'json', 'activity');
 
+    // Second interval
     await jest.advanceTimersByTimeAsync(1000);
+    await Promise.resolve();
+    
     expect(output).toHaveBeenCalledWith(expect.objectContaining({ id: 'a2' }), 'json', 'activity');
 
     await waitPromise;
@@ -103,10 +107,10 @@ describe('waitCommand', () => {
   it('should filter activities by type', async () => {
     (mockSessionsAPI.get as any).mockResolvedValueOnce({ id: '123', state: 'COMPLETED' });
 
-    (fetchAllPages as any).mockResolvedValueOnce({
+    (mockActivitiesAPI.list as any).mockResolvedValueOnce({
       items: [
-        { id: 'a1', type: 'PLAN', content: 'plan' },
-        { id: 'a2', type: 'PROGRESS', content: 'progress' }
+        { id: 'a1', type: 'PLAN', content: 'plan', createTime: '2026-04-06T20:00:00Z' },
+        { id: 'a2', type: 'PROGRESS', content: 'progress', createTime: '2026-04-06T20:05:00Z' }
       ]
     });
 
@@ -118,6 +122,7 @@ describe('waitCommand', () => {
     });
 
     await jest.advanceTimersByTimeAsync(1000);
+    await Promise.resolve();
 
     expect(output).toHaveBeenCalledWith(expect.objectContaining({ type: 'PLAN' }), 'json', 'activity');
     expect(output).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'PROGRESS' }), 'json', 'activity');

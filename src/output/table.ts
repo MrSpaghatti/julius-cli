@@ -1,18 +1,17 @@
 import Table from 'cli-table3';
 import chalk from 'chalk';
 import type { Session, Source, Activity, Template } from '../api/types.js';
+import { formatState } from './common.js';
 
-export function formatTableSessions(sessions: Session[]): string {
-  const table = new Table({
-    head: [
-      chalk.cyan('ID'),
-      chalk.cyan('Title'),
-      chalk.cyan('State'),
-      chalk.cyan('Repository'),
-      chalk.cyan('Created'),
-    ],
+function createTable(head: string[]): Table.Table {
+  return new Table({
+    head: head.map(h => chalk.cyan(h)),
     chars: { mid: '', 'left-mid': '', 'mid-mid': '', 'right-mid': '' },
   });
+}
+
+export function formatTableSessions(sessions: Session[]): string {
+  const table = createTable(['ID', 'Title', 'State', 'Repository', 'Created']);
 
   for (const session of sessions) {
     const repo = session.sourceContext.source.replace('sources/github/', '');
@@ -34,10 +33,7 @@ export function formatTableSessions(sessions: Session[]): string {
 }
 
 export function formatTableSources(sources: Source[]): string {
-  const table = new Table({
-    head: [chalk.cyan('ID'), chalk.cyan('Name')],
-    chars: { mid: '', 'left-mid': '', 'mid-mid': '', 'right-mid': '' },
-  });
+  const table = createTable(['ID', 'Name']);
 
   for (const source of sources) {
     table.push([source.id, source.name]);
@@ -47,16 +43,7 @@ export function formatTableSources(sources: Source[]): string {
 }
 
 export function formatTableActivities(activities: Activity[]): string {
-  const table = new Table({
-    head: [
-      chalk.cyan('ID'),
-      chalk.cyan('Type'),
-      chalk.cyan('Author'),
-      chalk.cyan('Content'),
-      chalk.cyan('Created'),
-    ],
-    chars: { mid: '', 'left-mid': '', 'mid-mid': '', 'right-mid': '' },
-  });
+  const table = createTable(['ID', 'Type', 'Author', 'Content', 'Created']);
 
   for (const activity of activities) {
     const created = new Date(activity.createTime).toLocaleString();
@@ -75,14 +62,7 @@ export function formatTableActivities(activities: Activity[]): string {
 }
 
 export function formatTableTemplates(templates: Template[]): string {
-  const table = new Table({
-    head: [
-      chalk.cyan('ID'),
-      chalk.cyan('Name'),
-      chalk.cyan('Description'),
-    ],
-    chars: { mid: '', 'left-mid': '', 'mid-mid': '', 'right-mid': '' },
-  });
+  const table = createTable(['ID', 'Name', 'Description']);
 
   for (const template of templates) {
     table.push([
@@ -93,23 +73,4 @@ export function formatTableTemplates(templates: Template[]): string {
   }
 
   return table.toString();
-}
-
-function formatState(state: string): string {
-  switch (state) {
-    case 'ACTIVE':
-    case 'EXECUTING':
-    case 'PLANNING':
-      return chalk.yellow(state);
-    case 'AWAITING_APPROVAL':
-      return chalk.magenta(state);
-    case 'COMPLETED':
-      return chalk.green(state);
-    case 'FAILED':
-      return chalk.red(state);
-    case 'CANCELLED':
-      return chalk.gray(state);
-    default:
-      return state;
-  }
 }

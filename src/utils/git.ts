@@ -1,77 +1,81 @@
-import { execSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import { InvalidArgsError } from './errors.js';
+
+export interface RepoInfo {
+  provider: string;
+  repo: string;
+}
 
 /**
  * Internal wrapper for execSync to allow mocking in tests.
  */
 export const gitProvider = {
   getRemoteUrl(remote: string): string {
-    return execSync(`git remote get-url ${remote}`, {
+    return execFileSync('git', ['remote', 'get-url', remote], {
       stdio: ['ignore', 'pipe', 'ignore'],
       encoding: 'utf-8',
     }).trim();
   },
-  exec(command: string, options: any = {}): string {
-    return execSync(command, options).toString();
+  exec(args: string[], options: any = {}): string {
+    return execFileSync('git', args, options).toString();
   },
-  execInherit(command: string): void {
-    execSync(command, { stdio: 'inherit' });
+  execInherit(args: string[]): void {
+    spawnSync('git', args, { stdio: 'inherit' });
   },
 };
 
 /**
- * Attempts to infer the GitHub owner/repo from the local git configuration.
+ * Attempts to infer the repository from the local git configuration.
  */
-export function inferGitHubRepo(): string {
-  try {
-    // Try to get the remote URL for 'origin'
-    const remoteUrl = gitProvider.getRemoteUrl('origin');
+export function inferRepo(): RepoInfo {
+  const remotes = ['origin', 'upstream', 'fork'];
+  let remoteUrl = '';
 
-    if (!remoteUrl) {
-      throw new Error('No remote URL found');
+  for (const remote of remotes) {
+    try {
+      remoteUrl = gitProvider.getRemoteUrl(remote);
+      if (remoteUrl) break;
+    } catch (e) {
+      // Ignore and try the next remote
     }
+  }
 
-    // Comprehensive regex for GitHub URL patterns
-    // Matches:
-    // https://github.com/owner/repo[.git]
-    // git@github.com:owner/repo[.git]
-    // git://github.com/owner/repo[.git]
-    // ssh://git@github.com/owner/repo[.git]
-    const githubRegex = /(?:(?:https?|git|ssh):\/\/|git@)github\.com[/:]([^/]+\/[^/\s]+?)(?:\.git)?\/?$/;
-    const match = remoteUrl.match(githubRegex);
-
-    if (match && match[1]) {
-      const parts = match[1].split('/');
-      return `${parts[0]}/${parts[1]}`;
-    }
-
-
-    throw new Error(`Could not parse repository path from URL: ${remoteUrl}`);
-  } catch (error) {
+  if (!remoteUrl) {
     throw new InvalidArgsError(
-      'Could not infer GitHub repository from local .git/config. Please provide it with --repo <owner/repo>'
+      'Could not infer repository from local .git/config. Please provide it with --repo <[provider/]owner/repo>'
     );
   }
+
+  // Regex to match github, gitlab, bitbucket etc.
+  const providerRegex = /(?:(?:https?|git|ssh):\/\/|git@)(github\.com|gitlab\.com|bitbucket\.org)[/:]([^/]+\/[^\s/]+?)(?:\.git)?\/?$/;
+  const match = remoteUrl.match(providerRegex);
+
+  if (match && match[1] && match[2]) {
+    const provider = match[1].split('.')[0]; // github, gitlab, bitbucket
+    return { provider, repo: match[2] };
+  }
+
+  throw new InvalidArgsError(`Could not parse repository path from URL: ${remoteUrl}`);
 }
 
 /**
- * Fetches and checks out a branch or PR from GitHub.
+ * Fetches and checks out a branch or PR from a provider.
  */
 export function pullSessionChanges(repo: string, branchName: string): void {
   try {
     console.log(`Fetching branch ${branchName} from ${repo}...`);
 
     // Check if the branch exists locally
-    const branches = gitProvider.exec('git branch');
+    const branches = gitProvider.exec(['branch']);
     if (branches.includes(branchName)) {
       console.log(
         `Branch ${branchName} already exists locally. Checking it out...`
       );
-      gitProvider.execInherit(`git checkout ${branchName}`);
+      gitProvider.execInherit(['checkout', branchName]);
     } else {
       // Try to fetch from origin
-      gitProvider.execInherit(`git fetch origin ${branchName}:${branchName}`);
-      gitProvider.execInherit(`git checkout ${branchName}`);
+      gitProvider.execInherit(['fetch', 'origin', `${branchName}:${branchName}`]);
+      gitProvider.execInherit(['checkout', branchName]);
     }
 
     console.log(`Successfully checked out ${branchName}`);
@@ -85,7 +89,7 @@ export function pullSessionChanges(repo: string, branchName: string): void {
  */
 export function diffSessionChanges(branchName: string): void {
   try {
-    gitProvider.execInherit(`git diff HEAD...${branchName}`);
+    gitProvider.execInherit(['diff', `HEAD...${branchName}`]);
   } catch (error) {
     throw new Error(`Failed to show diff: ${(error as Error).message}`);
   }

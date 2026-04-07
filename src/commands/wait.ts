@@ -1,10 +1,10 @@
 import { JulesAPIClient } from '../api/client.js';
 import { SessionsAPI } from '../api/sessions.js';
 import { ActivitiesAPI } from '../api/activities.js';
-import { Session, SessionState, OutputFormat } from '../api/types.js';
+import { Session, SessionState, OutputFormat, Activity } from '../api/types.js';
 import { output } from '../output/formatter.js';
 import { CLIError, ExitCode } from '../utils/errors.js';
-import { fetchAllPages } from '../utils/pagination.js';
+import { sleep } from '../utils/polling.js';
 import ora from 'ora';
 
 export interface WaitCommandOptions {
@@ -50,7 +50,8 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
 
   let lastSession: Session | null = null;
   let attempts = 0;
-  let lastActivityId: string | null = null;
+  let currentToken: string | undefined = undefined;
+  const seenActivityIds = new Set<string>();
 
   while (true) {
     attempts++;
@@ -79,21 +80,27 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
       // If follow mode is on, fetch and output new activities
       if (follow) {
         try {
-          // Fetch all activities across all pages
-          const result = await fetchAllPages((token, size) => activitiesAPI.list(sessionId, size, token), 100);
-          const allActivities = result.items;
+          let hasMore = true;
+          let newActivities: Activity[] = [];
+          
+          while (hasMore) {
+            const result = await activitiesAPI.list(sessionId, 100, currentToken);
+            
+            for (const act of result.items) {
+              if (!seenActivityIds.has(act.id)) {
+                newActivities.push(act);
+                seenActivityIds.add(act.id);
+              }
+            }
 
-          // Determine which ones are new
-          let newActivities = [];
-          if (lastActivityId === null) {
-            newActivities = allActivities;
-          } else {
-            const lastIndex = allActivities.findIndex(a => a.id === lastActivityId);
-            if (lastIndex !== -1) {
-              newActivities = allActivities.slice(lastIndex + 1);
+            if (result.nextPageToken) {
+              currentToken = result.nextPageToken;
             } else {
-              // If we somehow missed the last activity, just show everything current.
-              newActivities = allActivities;
+              hasMore = false;
+            }
+            
+            if (result.items.length === 0) {
+              hasMore = false;
             }
           }
 
@@ -104,9 +111,10 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
           }
 
           // Output new activities in chronological order
+          newActivities.sort((a, b) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime());
+
           for (const activity of newActivities) {
             output(activity, format, 'activity');
-            lastActivityId = activity.id;
           }
         } catch (actError) {
           if (verbose) {
@@ -147,8 +155,4 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
       await sleep(intervalMs);
     }
   }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

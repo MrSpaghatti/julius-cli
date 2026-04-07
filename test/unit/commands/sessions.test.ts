@@ -37,7 +37,7 @@ jest.unstable_mockModule('../../../src/utils/pagination.js', () => ({
 
 // Mock git
 jest.unstable_mockModule('../../../src/utils/git.js', () => ({
-  inferGitHubRepo: jest.fn(),
+  inferRepo: jest.fn(),
   pullSessionChanges: jest.fn(),
   diffSessionChanges: jest.fn(),
 }));
@@ -54,7 +54,7 @@ const { config } = await import('../../../src/config/index.js');
 const { output } = await import('../../../src/output/formatter.js');
 const { fetchAllPages } = await import('../../../src/utils/pagination.js');
 const {
-  inferGitHubRepo,
+  inferRepo,
   pullSessionChanges,
   diffSessionChanges,
 } = await import('../../../src/utils/git.js');
@@ -69,6 +69,7 @@ describe('Sessions Commands', () => {
     (config.getApiKey as any).mockResolvedValue('test-key');
     (config.getApiEndpoint as any).mockReturnValue('https://api.test');
     (getClient as any).mockResolvedValue({});
+    (inferRepo as any).mockReturnValue({ provider: 'github', repo: 'owner/repo' });
   });
 
   describe('create command', () => {

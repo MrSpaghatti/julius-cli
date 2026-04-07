@@ -43,10 +43,11 @@ export function createActivitiesCommands(): Command {
       const hasFilters = !!options.author || (options.type && options.type.length > 0);
       const shouldFetchAll = options.all || hasFilters;
 
+      if (hasFilters && !options.all && options.format !== 'quiet') {
+        console.warn('Warning: Client-side filtering implies fetching all pages, which may take a long time or consume significant API quota.');
+      }
+
       if (shouldFetchAll) {
-        if (hasFilters && !options.all && options.format === 'pretty') {
-          console.log('Fetching all pages for accurate filtering...');
-        }
         result = await fetchAllPages((token, size) => api.list(sessionId, size, token), 100);
       } else {
         result = await api.list(sessionId, pageSize, options.pageToken);

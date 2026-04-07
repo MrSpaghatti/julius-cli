@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import type { Session, Source, Activity, Template } from '../api/types.js';
+import { formatState } from './common.js';
 
 export function formatPrettySession(session: Session): string {
   const lines: string[] = [];
@@ -103,23 +104,4 @@ export function formatPrettyActivity(activity: Activity): string {
   lines.push('');
 
   return lines.join('\n');
-}
-
-function formatState(state: string): string {
-  switch (state) {
-    case 'ACTIVE':
-    case 'EXECUTING':
-    case 'PLANNING':
-      return chalk.yellow(state);
-    case 'AWAITING_APPROVAL':
-      return chalk.magenta(state);
-    case 'COMPLETED':
-      return chalk.green(state);
-    case 'FAILED':
-      return chalk.red(state);
-    case 'CANCELLED':
-      return chalk.gray(state);
-    default:
-      return chalk.gray(state);
-  }
 }

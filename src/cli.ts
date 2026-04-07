@@ -13,7 +13,7 @@ export const cli = new Command();
 cli
   .name('jules-cli')
   .description('AI-first CLI for Jules REST API with JSON output and full automation support')
-  .version('0.3.0');
+  .version('0.4.0');
 
 // Global options
 cli.option('--verbose', 'Enable verbose logging');
@@ -38,7 +38,9 @@ cli.configureOutput({
 });
 
 // Handle errors globally
-process.on('uncaughtException', handleError);
+process.on('uncaughtException', (error) => {
+  process.exit(handleError(error));
+});
 process.on('unhandledRejection', (reason) => {
-  handleError(reason);
+  process.exit(handleError(reason));
 });

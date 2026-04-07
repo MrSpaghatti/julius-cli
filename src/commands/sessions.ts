@@ -5,7 +5,7 @@ import { SessionsAPI } from '../api/sessions.js';
 import { output } from '../output/formatter.js';
 import { InvalidArgsError } from '../utils/errors.js';
 import {
-  inferGitHubRepo,
+  inferRepo,
   pullSessionChanges,
   diffSessionChanges,
 } from '../utils/git.js';
@@ -30,24 +30,35 @@ export async function handleCreateSession(options: CreateSessionParams) {
   const client = await getClient();
   const api = new SessionsAPI(client);
 
-  const repo = options.repo || inferGitHubRepo();
-
   if (options.prompt.length > 10000) {
     throw new InvalidArgsError('Prompt is too long (max 10,000 characters)');
   }
 
-  // Parse repo into source format
-  const repoParts = repo.split('/');
-  if (repoParts.length !== 2) {
-    throw new InvalidArgsError('Repository must be in format: owner/repo');
+  let provider = 'github';
+  let repo = '';
+
+  if (options.repo) {
+    const parts = options.repo.split('/');
+    if (parts.length === 3) {
+      provider = parts[0];
+      repo = `${parts[1]}/${parts[2]}`;
+    } else if (parts.length === 2) {
+      repo = options.repo;
+    } else {
+      throw new InvalidArgsError('Repository must be in format: [provider/]owner/repo');
+    }
+  } else {
+    const inferred = inferRepo();
+    provider = inferred.provider;
+    repo = inferred.repo;
   }
 
-  const sourceId = `github/${repo}`;
+  const sourceId = `${provider}/${repo}`;
   const source = `sources/${sourceId}`;
 
   let spinner;
   if (options.format === 'pretty' && !options.wait && !options.follow) {
-    spinner = ora(`Creating session for ${repo}...`).start();
+    spinner = ora(`Creating session for ${sourceId}...`).start();
   }
 
   const session = await api.create({
@@ -151,6 +162,10 @@ export function createSessionsCommands(): Command {
         const hasFilters =
           !!options.repo || (options.state && options.state.length > 0);
         const shouldFetchAll = options.all || hasFilters;
+
+        if (hasFilters && !options.all && options.format !== 'quiet') {
+          console.warn('Warning: Client-side filtering implies fetching all pages, which may take a long time or consume significant API quota.');
+        }
 
         let spinner;
         if (options.format === 'pretty' && shouldFetchAll) {

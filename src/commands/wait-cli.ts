@@ -80,7 +80,7 @@ export function createWaitCommand(): Command {
 
         await Promise.all(waitPromises);
       } catch (error) {
-        handleError(error);
+        process.exit(handleError(error));
       }
     });
 

@@ -68,20 +68,20 @@ export class NetworkError extends CLIError {
   }
 }
 
-export function handleError(error: unknown): never {
+export function handleError(error: unknown): ExitCode {
   if (error instanceof CLIError) {
     console.error(`Error: ${error.message}`);
     if (error.hint) {
       console.error(`Hint: ${error.hint}`);
     }
-    process.exit(error.exitCode);
+    return error.exitCode;
   }
 
   if (error instanceof Error) {
     console.error(`Unexpected error: ${error.message}`);
-    process.exit(ExitCode.GENERAL_ERROR);
+    return ExitCode.GENERAL_ERROR;
   }
 
   console.error('An unknown error occurred');
-  process.exit(ExitCode.GENERAL_ERROR);
+  return ExitCode.GENERAL_ERROR;
 }
