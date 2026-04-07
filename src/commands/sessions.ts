@@ -12,7 +12,7 @@ import {
 import { fetchAllPages } from '../utils/pagination.js';
 import { getClient } from '../utils/client.js';
 import { waitCommand } from './wait.js';
-import type { OutputFormat } from '../api/types.js';
+import type { Session, OutputFormat } from '../api/types.js';
 
 export interface CreateSessionParams {
   repo?: string;
