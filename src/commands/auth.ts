@@ -81,8 +81,8 @@ export function createAuthCommands(): Command {
       config.setAuthMethod('oauth');
       
       // Store client credentials securely if provided, for future refreshes
-      if (clientId && clientSecret) {
-        await config.setOAuthClientCredentials(clientId, clientSecret);
+      if (clientId) {
+        await config.setOAuthClientCredentials(clientId, clientSecret || '');
       }
 
       output(

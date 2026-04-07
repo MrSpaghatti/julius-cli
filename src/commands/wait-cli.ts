@@ -23,58 +23,54 @@ export function createWaitCommand(): Command {
     .option('--activity-type <types...>', 'Filter streamed activities by type (PLAN, MESSAGE, PROGRESS, ERROR)')
     .option('--verbose', 'Enable verbose logging')
     .action(async (sessionIds: string[], options: any) => {
-      try {
-        const client = await getClient();
+      const client = await getClient();
 
-        // Parse timeout and interval
-        const timeout = parseInt(options.timeout, 10);
-        const interval = parseInt(options.interval, 10);
+      // Parse timeout and interval
+      const timeout = parseInt(options.timeout, 10);
+      const interval = parseInt(options.interval, 10);
 
-        if (isNaN(timeout) || timeout <= 0) {
-          throw new CLIError('Timeout must be a positive number', ExitCode.INVALID_ARGS);
-        }
-
-        if (isNaN(interval) || interval <= 0) {
-          throw new CLIError('Interval must be a positive number', ExitCode.INVALID_ARGS);
-        }
-
-        // Validate state if provided
-        const validStates: SessionState[] = [
-          'PENDING',
-          'PLANNING',
-          'AWAITING_APPROVAL',
-          'EXECUTING',
-          'COMPLETED',
-          'FAILED',
-          'CANCELLED',
-        ];
-
-        if (options.state && !validStates.includes(options.state as SessionState)) {
-          throw new CLIError(
-            `Invalid state: ${options.state}. Valid states: ${validStates.join(', ')}`,
-            ExitCode.INVALID_ARGS
-          );
-        }
-
-        // If multiple sessions, we run them in parallel
-        const waitPromises = sessionIds.map(sessionId => 
-          waitCommand(client, {
-            sessionId,
-            timeout,
-            interval,
-            state: options.state as SessionState | undefined,
-            format: options.format as OutputFormat,
-            verbose: !!options.verbose,
-            follow: !!options.follow,
-            activityTypes: options.activityType,
-            noSpinner: sessionIds.length > 1,
-          })
-        );
-
-        await Promise.all(waitPromises);
-      } catch (error) {
-        process.exit(handleError(error));
+      if (isNaN(timeout) || timeout <= 0) {
+        throw new CLIError('Timeout must be a positive number', ExitCode.INVALID_ARGS);
       }
+
+      if (isNaN(interval) || interval <= 0) {
+        throw new CLIError('Interval must be a positive number', ExitCode.INVALID_ARGS);
+      }
+
+      // Validate state if provided
+      const validStates: SessionState[] = [
+        'PENDING',
+        'PLANNING',
+        'AWAITING_APPROVAL',
+        'EXECUTING',
+        'COMPLETED',
+        'FAILED',
+        'CANCELLED',
+      ];
+
+      if (options.state && !validStates.includes(options.state as SessionState)) {
+        throw new CLIError(
+          `Invalid state: ${options.state}. Valid states: ${validStates.join(', ')}`,
+          ExitCode.INVALID_ARGS
+        );
+      }
+
+      // If multiple sessions, we run them in parallel
+      const waitPromises = sessionIds.map(sessionId => 
+        waitCommand(client, {
+          sessionId,
+          timeout,
+          interval,
+          state: options.state as SessionState | undefined,
+          format: options.format as OutputFormat,
+          verbose: !!options.verbose,
+          follow: !!options.follow,
+          activityTypes: options.activityType,
+          noSpinner: sessionIds.length > 1,
+        })
+      );
+
+      await Promise.all(waitPromises);
     });
 
   return wait;

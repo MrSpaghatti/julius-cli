@@ -176,6 +176,9 @@ export async function runDeviceCodeFlow(clientId: string, scopes: string[]): Pro
         });
       } else if (tokenData.error === 'authorization_pending') {
         setTimeout(poll, pollInterval);
+      } else if (tokenData.error === 'slow_down') {
+        const newInterval = (tokenData.interval || (pollInterval / 1000) + 5) * 1000;
+        setTimeout(poll, newInterval);
       } else {
         reject(new Error(`Token exchange failed: ${tokenData.error_description || tokenData.error}`));
       }

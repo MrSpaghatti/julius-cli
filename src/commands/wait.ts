@@ -50,7 +50,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
 
   let lastSession: Session | null = null;
   let attempts = 0;
-  let currentToken: string | undefined = undefined;
+  let lastSeenTime: string | undefined = undefined;
   const seenActivityIds = new Set<string>();
   let consecutiveErrors = 0;
   const MAX_CONSECUTIVE_ERRORS = 10;
@@ -85,10 +85,13 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
       if (follow) {
         try {
           let newActivities: Activity[] = [];
-          let pollToken: string | undefined = currentToken;
+          let pollToken: string | undefined = undefined;
+          
+          // Optimization: Filter by createTime after the first pass
+          const filter = lastSeenTime ? `createTime > "${lastSeenTime}"` : undefined;
 
           while (true) {
-            const result = await activitiesAPI.list(sessionId, 100, pollToken);
+            const result = await activitiesAPI.list(sessionId, 100, pollToken, filter);
 
             for (const act of result.items) {
               if (!seenActivityIds.has(act.id)) {
@@ -96,17 +99,17 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
                   newActivities.push(act);
                 }
                 seenActivityIds.add(act.id);
+                // Update last seen time to the latest activity's createTime
+                if (!lastSeenTime || new Date(act.createTime) > new Date(lastSeenTime)) {
+                  lastSeenTime = act.createTime;
+                }
               }
             }
 
             if (!result.nextPageToken) {
-              // Store the last valid page token if the API supports resuming from it,
-              // or keep it undefined to start from beginning if that's how it works.
-              // Most APIs return undefined for the last page.
               break;
             }
             pollToken = result.nextPageToken;
-            currentToken = pollToken; // Persist for next loop
           }
 
           if (isFirstPass) {

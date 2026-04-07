@@ -67,9 +67,16 @@ export function pullSessionChanges(repo: string, branchName: string): void {
     const remote = 'origin';
     console.log(`Fetching branch ${branchName} from ${repo} (remote: ${remote})...`);
 
-    // Check if the branch exists locally
-    const branches = gitProvider.exec(['branch']);
-    if (branches.includes(branchName)) {
+    // Check if the branch exists locally using exact matching
+    let branchExists = false;
+    try {
+      gitProvider.exec(['show-ref', '--verify', '--quiet', `refs/heads/${branchName}`]);
+      branchExists = true;
+    } catch (e) {
+      // Branch does not exist
+    }
+
+    if (branchExists) {
       console.log(
         `Branch ${branchName} already exists locally. Checking it out...`
       );

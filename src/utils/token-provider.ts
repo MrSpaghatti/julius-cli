@@ -13,6 +13,8 @@ export class ApiKeyProvider implements TokenProvider {
 }
 
 export class OAuthProvider implements TokenProvider {
+  private refreshPromise: Promise<OAuthTokens> | null = null;
+
   constructor(
     private tokens: OAuthTokens,
     private refreshFn: () => Promise<OAuthTokens>
@@ -21,7 +23,17 @@ export class OAuthProvider implements TokenProvider {
   async getAuthHeader(): Promise<Record<string, string>> {
     // If token is expired or expires in less than 60 seconds, refresh it
     if (Date.now() >= this.tokens.expiresAt - 60_000) {
-      this.tokens = await this.refreshFn();
+      if (!this.refreshPromise) {
+        this.refreshPromise = this.refreshFn().then(newTokens => {
+          this.tokens = newTokens;
+          this.refreshPromise = null;
+          return newTokens;
+        }).catch(err => {
+          this.refreshPromise = null;
+          throw err;
+        });
+      }
+      await this.refreshPromise;
     }
     return { Authorization: `Bearer ${this.tokens.accessToken}` };
   }

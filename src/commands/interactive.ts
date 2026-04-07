@@ -4,6 +4,7 @@ import { stdin as input, stdout as output } from 'node:process';
 import chalk from 'chalk';
 import { cli } from '../cli.js';
 import { inferRepo } from '../utils/git.js';
+import { resetHeader } from '../output/formatter.js';
 
 export function createInteractiveCommand(): Command {
   return new Command('interactive')
@@ -66,6 +67,7 @@ export function createInteractiveCommand(): Command {
 
       const executeCommand = async (parts: string[]) => {
         isCommandRunning = true;
+        resetHeader();
         try {
           // Using parseAsync in-process. 
           await cli.parseAsync(parts, { from: 'user' });

@@ -18,6 +18,10 @@ export function createListenCommand(): Command {
       const host = options.host || `http://localhost:${port}`;
       const secret = options.secret;
 
+      if (options.register && host.includes('localhost')) {
+        console.log(chalk.yellow('Warning: Registering a webhook with localhost. This will only work if the API is also running locally or via a tunnel.'));
+      }
+
       if (secret) {
         console.log(chalk.blue('HMAC signature verification enabled'));
       } else {
@@ -31,6 +35,16 @@ export function createListenCommand(): Command {
       const RATE_LIMIT_WINDOW_MS = 60_000;
       const RATE_LIMIT_MAX = 100;
       const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
+
+      // Periodically clean up rate limit map to prevent memory leak
+      setInterval(() => {
+        const now = Date.now();
+        for (const [ip, entry] of rateLimitMap.entries()) {
+          if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+            rateLimitMap.delete(ip);
+          }
+        }
+      }, RATE_LIMIT_WINDOW_MS);
 
       function checkRateLimit(ip: string): boolean {
         const now = Date.now();

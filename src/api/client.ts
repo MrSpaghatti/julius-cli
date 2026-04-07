@@ -85,6 +85,18 @@ export class JulesAPIClient {
 
     // Not found errors
     if (status === 404) {
+      const url = axiosError.config?.url || '';
+      const parts = url.split('/').filter(Boolean);
+      if (parts.length >= 1) {
+        const id = parts[parts.length - 1];
+        let resource = 'Resource';
+        if (parts.length >= 2) {
+          const rawResource = parts[parts.length - 2];
+          // Simple normalization: sessions -> Session
+          resource = rawResource.charAt(0).toUpperCase() + rawResource.slice(1).replace(/s$/, '');
+        }
+        throw new NotFoundError(resource, id);
+      }
       throw new NotFoundError('Resource', errorMessage);
     }
 
