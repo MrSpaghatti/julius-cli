@@ -3,6 +3,7 @@ import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { JulesAPIClient } from '../../../src/api/client.js';
 import { APIError, AuthError, NetworkError, NotFoundError } from '../../../src/utils/errors.js';
+import { ApiKeyProvider } from '../../../src/utils/token-provider.js';
 
 const server = setupServer();
 
@@ -16,7 +17,8 @@ afterAll(() => server.close());
 describe('JulesAPIClient', () => {
   const apiKey = 'test-api-key';
   const baseURL = 'https://jules.googleapis.com/v1alpha';
-  const client = new JulesAPIClient(apiKey, baseURL);
+  const provider = new ApiKeyProvider(apiKey);
+  const client = new JulesAPIClient(provider, baseURL);
 
   describe('GET requests', () => {
     it('should perform a successful GET request', async () => {

@@ -2,14 +2,27 @@ import Conf from 'conf';
 import { setPassword, getPassword, deletePassword } from 'cross-keychain';
 import type { CLIConfig } from '../api/types.js';
 import { CLIError, ExitCode } from '../utils/errors.js';
+import { OAuthTokens } from '../utils/oauth.js';
 
 const SERVICE_NAME = 'jules-cli';
 const ACCOUNT_NAME = 'api-key';
+const ACCOUNT_NAME_OAUTH = 'oauth-tokens';
 
 const schema = {
   apiEndpoint: {
     type: 'string',
     default: 'https://jules.googleapis.com/v1alpha',
+  },
+  authMethod: {
+    type: 'string',
+    enum: ['apikey', 'oauth'],
+    default: 'apikey',
+  },
+  googleClientId: {
+    type: 'string',
+  },
+  googleClientSecret: {
+    type: 'string',
   },
   defaultFormat: {
     type: 'string',
@@ -79,6 +92,14 @@ class ConfigManager {
     }
   }
 
+  async clearOAuthTokens(): Promise<void> {
+    try {
+      await deletePassword(SERVICE_NAME, ACCOUNT_NAME_OAUTH);
+    } catch (error) {
+      // Ignore if it doesn't exist
+    }
+  }
+
   has(key: keyof CLIConfig): boolean {
     return this.conf.has(key);
   }
@@ -95,7 +116,7 @@ class ConfigManager {
     }
     // Fall back to keychain
     try {
-      return await getPassword(SERVICE_NAME, ACCOUNT_NAME) || undefined;
+      return (await getPassword(SERVICE_NAME, ACCOUNT_NAME)) || undefined;
     } catch (error) {
       return undefined;
     }
@@ -103,6 +124,30 @@ class ConfigManager {
 
   async setApiKey(key: string): Promise<void> {
     await setPassword(SERVICE_NAME, ACCOUNT_NAME, key);
+  }
+
+  async getOAuthTokens(): Promise<OAuthTokens | undefined> {
+    try {
+      const tokens = await getPassword(SERVICE_NAME, ACCOUNT_NAME_OAUTH);
+      if (tokens) {
+        return JSON.parse(tokens);
+      }
+    } catch (error) {
+      // Ignore
+    }
+    return undefined;
+  }
+
+  async setOAuthTokens(tokens: OAuthTokens): Promise<void> {
+    await setPassword(SERVICE_NAME, ACCOUNT_NAME_OAUTH, JSON.stringify(tokens));
+  }
+
+  getAuthMethod(): 'apikey' | 'oauth' {
+    return (this.conf.get('authMethod') as 'apikey' | 'oauth') || 'apikey';
+  }
+
+  setAuthMethod(method: 'apikey' | 'oauth'): void {
+    this.conf.set('authMethod', method);
   }
 
   getApiEndpoint(): string {

@@ -1,9 +1,9 @@
 import { Command } from 'commander';
 import { config } from '../config/index.js';
-import { JulesAPIClient } from '../api/client.js';
 import { waitCommand } from './wait.js';
 import { handleError, CLIError, ExitCode } from '../utils/errors.js';
 import type { SessionState, OutputFormat } from '../api/types.js';
+import { getClient } from '../utils/client.js';
 
 export function createWaitCommand(): Command {
   const wait = new Command('wait');
@@ -24,14 +24,7 @@ export function createWaitCommand(): Command {
     .option('--verbose', 'Enable verbose logging')
     .action(async (sessionIds: string[], options: any) => {
       try {
-        const apiKey = await config.getApiKey();
-        const apiEndpoint = config.getApiEndpoint();
-
-        if (!apiKey) {
-          throw new CLIError('API key not set. Run: jules-cli auth set <api-key>', ExitCode.AUTH_ERROR);
-        }
-
-        const client = new JulesAPIClient(apiKey, apiEndpoint);
+        const client = await getClient();
 
         // Parse timeout and interval
         const timeout = parseInt(options.timeout, 10);

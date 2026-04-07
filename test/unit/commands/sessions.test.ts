@@ -7,6 +7,11 @@ jest.unstable_mockModule('../../../src/config/index.js', () => ({
     getApiKey: jest.fn(),
     getApiEndpoint: jest.fn(),
     get: jest.fn(),
+    getOAuthTokens: jest.fn(),
+    getAuthMethod: jest.fn(),
+    setAuthMethod: jest.fn(),
+    clearOAuthTokens: jest.fn(),
+    setOAuthTokens: jest.fn(),
   },
 }));
 
@@ -68,6 +73,8 @@ describe('Sessions Commands', () => {
     sessionsCmd = createSessionsCommands();
     (config.getApiKey as any).mockResolvedValue('test-key');
     (config.getApiEndpoint as any).mockReturnValue('https://api.test');
+    (config.getOAuthTokens as any).mockResolvedValue(undefined);
+    (config.getAuthMethod as any).mockReturnValue('apikey');
     (getClient as any).mockResolvedValue({});
     (inferRepo as any).mockReturnValue({ provider: 'github', repo: 'owner/repo' });
   });

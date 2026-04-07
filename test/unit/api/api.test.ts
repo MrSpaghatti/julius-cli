@@ -5,6 +5,7 @@ import { JulesAPIClient } from '../../../src/api/client.js';
 import { SessionsAPI } from '../../../src/api/sessions.js';
 import { ActivitiesAPI } from '../../../src/api/activities.js';
 import { SourcesAPI } from '../../../src/api/sources.js';
+import { ApiKeyProvider } from '../../../src/utils/token-provider.js';
 
 const baseURL = 'https://jules.googleapis.com/v1alpha';
 const server = setupServer();
@@ -18,7 +19,8 @@ afterAll(() => server.close());
 
 describe('API classes', () => {
   const apiKey = 'test-api-key';
-  const client = new JulesAPIClient(apiKey, baseURL);
+  const provider = new ApiKeyProvider(apiKey);
+  const client = new JulesAPIClient(provider, baseURL);
 
   describe('SessionsAPI', () => {
     const sessionsAPI = new SessionsAPI(client);

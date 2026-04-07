@@ -1,20 +1,30 @@
 import axios, { type AxiosInstance, type AxiosError } from 'axios';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
 import { APIError, AuthError, NetworkError, NotFoundError } from '../utils/errors.js';
+import { TokenProvider } from '../utils/token-provider.js';
 
 export class JulesAPIClient {
   private axios: AxiosInstance;
   private baseURL: string;
 
-  constructor(apiKey: string, baseURL: string = process.env.JULES_API_URL || 'https://jules.googleapis.com/v1alpha') {
+  constructor(
+    private tokenProvider: TokenProvider,
+    baseURL: string = process.env.JULES_API_URL || 'https://jules.googleapis.com/v1alpha'
+  ) {
     this.baseURL = baseURL;
     this.axios = axios.create({
       baseURL: this.baseURL,
       headers: {
-        'X-Goog-Api-Key': apiKey,
         'Content-Type': 'application/json',
       },
       timeout: 30000,
+    });
+
+    // Add auth header interceptor
+    this.axios.interceptors.request.use(async (config) => {
+      const headers = await this.tokenProvider.getAuthHeader();
+      Object.assign(config.headers, headers);
+      return config;
     });
 
     // Add retry logic
@@ -66,7 +76,7 @@ export class JulesAPIClient {
     // Authentication errors
     if (status === 401 || status === 403) {
       throw new AuthError(
-        'Invalid or missing API key. Run "jules-cli auth set <key>" to configure.'
+        'Invalid or missing credentials. Run "jules-cli auth login" or "jules-cli auth set <key>" to configure.'
       );
     }
 

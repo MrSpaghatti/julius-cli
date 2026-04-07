@@ -10,6 +10,11 @@ jest.unstable_mockModule('../../../src/config/index.js', () => ({
     get: jest.fn(),
     getAll: jest.fn(),
     clear: jest.fn(),
+    getOAuthTokens: jest.fn(),
+    getAuthMethod: jest.fn(),
+    setAuthMethod: jest.fn(),
+    clearOAuthTokens: jest.fn(),
+    setOAuthTokens: jest.fn(),
   },
 }));
 
@@ -28,6 +33,8 @@ describe('Config Commands', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     configCmd = createConfigCommands();
+    (config.getOAuthTokens as any).mockResolvedValue(undefined);
+    (config.getAuthMethod as any).mockReturnValue('apikey');
   });
 
   it('should set a config value', async () => {

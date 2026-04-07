@@ -6,6 +6,8 @@ jest.unstable_mockModule('../../../src/config/index.js', () => ({
   config: {
     getApiKey: jest.fn(),
     getApiEndpoint: jest.fn(),
+    getOAuthTokens: jest.fn(),
+    getAuthMethod: jest.fn(),
     get: jest.fn(),
     getRequired: jest.fn(),
   },
@@ -27,6 +29,8 @@ describe('Wait Command CLI', () => {
     jest.clearAllMocks();
     (config.getApiKey as any).mockResolvedValue('test-key');
     (config.getApiEndpoint as any).mockReturnValue('https://api.test');
+    (config.getOAuthTokens as any).mockResolvedValue(undefined);
+    (config.getAuthMethod as any).mockReturnValue('apikey');
     (config.get as any).mockReturnValue(undefined);
     (config.getRequired as any).mockImplementation((key: string) => {
       const defaults: Record<string, any> = {

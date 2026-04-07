@@ -6,6 +6,7 @@ import { config } from '../../src/config/index.js';
 import { getClient } from '../../src/utils/client.js';
 import { SessionsAPI } from '../../src/api/sessions.js';
 import { ActivitiesAPI } from '../../src/api/activities.js';
+import { ApiKeyProvider } from '../../src/utils/token-provider.js';
 
 const baseURL = 'https://jules.googleapis.com/v1alpha';
 const server = setupServer();
@@ -40,7 +41,7 @@ describe('API Contract Validation', () => {
         http.get(`${baseURL}/sessions`, () => HttpResponse.json({ wrong: 'shape' }))
       );
 
-      const client = new JulesAPIClient(apiKey, baseURL);
+      const client = new JulesAPIClient(new ApiKeyProvider(apiKey), baseURL);
       const api = new SessionsAPI(client);
 
       await expect(api.list()).rejects.toThrow('Expected sessions array in API response');
@@ -54,7 +55,7 @@ describe('API Contract Validation', () => {
         http.get(`${baseURL}/sessions`, () => HttpResponse.json(null))
       );
 
-      const client = new JulesAPIClient(apiKey, baseURL);
+      const client = new JulesAPIClient(new ApiKeyProvider(apiKey), baseURL);
       const api = new SessionsAPI(client);
 
       await expect(api.list()).rejects.toThrow();
@@ -68,7 +69,7 @@ describe('API Contract Validation', () => {
         http.get(`${baseURL}/sessions`, () => HttpResponse.json({ sessions: 'not-an-array' }))
       );
 
-      const client = new JulesAPIClient(apiKey, baseURL);
+      const client = new JulesAPIClient(new ApiKeyProvider(apiKey), baseURL);
       const api = new SessionsAPI(client);
 
       await expect(api.list()).rejects.toThrow('Expected sessions array in API response');
@@ -85,7 +86,7 @@ describe('API Contract Validation', () => {
         http.get(`${baseURL}/sessions/${sessionId}/activities`, () => HttpResponse.json({ wrong: 'shape' }))
       );
 
-      const client = new JulesAPIClient(apiKey, baseURL);
+      const client = new JulesAPIClient(new ApiKeyProvider(apiKey), baseURL);
       const api = new ActivitiesAPI(client);
 
       await expect(api.list(sessionId)).rejects.toThrow('Expected activities array in API response');
@@ -100,7 +101,7 @@ describe('API Contract Validation', () => {
         http.get(`${baseURL}/sessions/${sessionId}/activities`, () => HttpResponse.json(null))
       );
 
-      const client = new JulesAPIClient(apiKey, baseURL);
+      const client = new JulesAPIClient(new ApiKeyProvider(apiKey), baseURL);
       const api = new ActivitiesAPI(client);
 
       await expect(api.list(sessionId)).rejects.toThrow();
@@ -115,7 +116,7 @@ describe('API Contract Validation', () => {
         http.get(`${baseURL}/sessions/${sessionId}/activities`, () => HttpResponse.json({ activities: 'not-an-array' }))
       );
 
-      const client = new JulesAPIClient(apiKey, baseURL);
+      const client = new JulesAPIClient(new ApiKeyProvider(apiKey), baseURL);
       const api = new ActivitiesAPI(client);
 
       await expect(api.list(sessionId)).rejects.toThrow('Expected activities array in API response');
@@ -169,7 +170,7 @@ describe('API Contract Validation', () => {
         })
       );
 
-      const client = new JulesAPIClient(apiKey, baseURL);
+      const client = new JulesAPIClient(new ApiKeyProvider(apiKey), baseURL);
       const api = new ActivitiesAPI(client);
 
       // Manually paginate
@@ -204,7 +205,7 @@ describe('API Contract Validation', () => {
         })
       );
 
-      const client = new JulesAPIClient(apiKey, baseURL);
+      const client = new JulesAPIClient(new ApiKeyProvider(apiKey), baseURL);
       const { waitCommand } = await import('../../src/commands/wait.js');
 
       await expect(
@@ -244,7 +245,7 @@ describe('API Contract Validation', () => {
         })
       );
 
-      const client = new JulesAPIClient(apiKey, baseURL);
+      const client = new JulesAPIClient(new ApiKeyProvider(apiKey), baseURL);
       const { waitCommand } = await import('../../src/commands/wait.js');
 
       // Should succeed despite transient errors
@@ -272,7 +273,7 @@ describe('API Contract Validation', () => {
         })
       );
 
-      const client = new JulesAPIClient(apiKey, baseURL);
+      const client = new JulesAPIClient(new ApiKeyProvider(apiKey), baseURL);
       const { waitCommand } = await import('../../src/commands/wait.js');
 
       await expect(

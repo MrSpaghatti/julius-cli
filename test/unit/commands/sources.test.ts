@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals';
 import { Command } from 'commander';
+import { AuthError } from '../../../src/utils/errors.js';
 
 // Mock config
 jest.unstable_mockModule('../../../src/config/index.js', () => ({
@@ -7,6 +8,11 @@ jest.unstable_mockModule('../../../src/config/index.js', () => ({
     getApiKey: jest.fn(),
     getApiEndpoint: jest.fn(),
     get: jest.fn(),
+    getOAuthTokens: jest.fn(),
+    getAuthMethod: jest.fn(),
+    setAuthMethod: jest.fn(),
+    clearOAuthTokens: jest.fn(),
+    setOAuthTokens: jest.fn(),
   },
 }));
 
@@ -31,10 +37,16 @@ jest.unstable_mockModule('../../../src/utils/pagination.js', () => ({
   fetchAllPages: jest.fn(),
 }));
 
+// Mock client utility
+jest.unstable_mockModule('../../../src/utils/client.js', () => ({
+  getClient: jest.fn(),
+}));
+
 const { createSourcesCommands } = await import('../../../src/commands/sources.js');
 const { config } = await import('../../../src/config/index.js');
 const { output } = await import('../../../src/output/formatter.js');
 const { fetchAllPages } = await import('../../../src/utils/pagination.js');
+const { getClient } = await import('../../../src/utils/client.js');
 
 describe('Sources Commands', () => {
   let sourcesCmd: Command;
@@ -44,6 +56,9 @@ describe('Sources Commands', () => {
     sourcesCmd = createSourcesCommands();
     (config.getApiKey as any).mockResolvedValue('test-key');
     (config.getApiEndpoint as any).mockReturnValue('https://api.test');
+    (config.getOAuthTokens as any).mockResolvedValue(undefined);
+    (config.getAuthMethod as any).mockReturnValue('apikey');
+    (getClient as any).mockResolvedValue({});
   });
 
   describe('list command', () => {
@@ -78,11 +93,11 @@ describe('Sources Commands', () => {
     });
 
     it('should throw error if API key is missing', async () => {
-      (config.getApiKey as any).mockResolvedValue(null);
+      (getClient as any).mockRejectedValue(new AuthError('No credentials found.'));
       const root = new Command().addCommand(sourcesCmd);
       sourcesCmd.exitOverride();
       await expect(root.parseAsync(['node', 'test', 'sources', 'list']))
-        .rejects.toThrow(/No API key found/);
+        .rejects.toThrow(/No credentials found/);
     });
 
     it('should use pretty output format', async () => {
