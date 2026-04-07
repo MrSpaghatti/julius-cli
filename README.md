@@ -1,4 +1,4 @@
-# julius-cli
+# julius-cli v0.6.0
 
 AI-first CLI for Jules REST API with JSON output and full automation support.
 

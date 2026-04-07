@@ -1,261 +1,68 @@
-# Next Session Prompt: Julius CLI v0.6.0 — Google OAuth Support
+# Next Session Prompt: Julius CLI v0.7.0 — REPL Overhaul & Provider Parity
 
-We have just completed v0.5.1 (audit fixes: HMAC webhook verification, rate limiting, config validation, integration tests). The next phase is **v0.6.0: Google OAuth 2.0 support** alongside the existing API key flow.
+We have just completed v0.6.0 (Rebranding to `julius-cli`, Secure Keychain Storage, Activity Tailing Fixes, Robust API Parsing, and Template Security). The next phase is **v0.7.0: Interactive Mode Overhaul and GitLab/Bitbucket Parity**.
 
 ---
 
 ## Current State
 
-- **Version:** 0.5.1 (tagged as 0.5.0 in package.json — bump to 0.6.0 on release)
-- **Tests:** 120 passing, build clean
-- **Key commit:** `570d7d8` (latest)
-
-### Auth today (API key only)
-- `auth set <key>` → stores in system keychain via `cross-keychain`
-- `auth clear` → removes from keychain
-- `auth status` → pings API to verify key
-- `src/utils/client.ts` `getClient()` → reads API key, constructs `JulesAPIClient(apiKey, endpoint)`
-- `JulesAPIClient` constructor takes a plain `apiKey: string`, sets `X-Goog-Api-Key` header on all requests
+- **Version:** 0.6.0
+- **Tests:** 130+ passing, build clean
+- **Security:** OAuth client credentials and API keys are stored in the system keychain.
+- **Tailing:** Activity streaming in `wait --follow` is robust and uses persistent tokens.
+- **Renaming:** Project is fully rebranded as `julius-cli`.
 
 ---
 
 ## What to Implement
 
-### 1. New dependency
+### 1. Interactive Mode (REPL) Overhaul
+The current `interactive` command in `src/commands/interactive.ts` re-spawns the Node process for every command. This is slow and loses in-memory state.
 
-Install `google-auth-library`:
-```bash
-npm install google-auth-library
-```
+**Goal:** Refactor the REPL to execute commands in-process using Commander's internal APIs.
 
-This provides `OAuth2Client` for PKCE browser flow, device code flow, token exchange, and auto-refresh.
+**Tasks:**
+- Modify `src/commands/interactive.ts` to use `cli.parseAsync(parts, { from: 'user' })` instead of `spawn('node', ...)`.
+- Implement a persistent `context` object in the REPL (e.g., `currentRepo`, `lastSessionId`).
+- Add "macro" support: allow users to save a sequence of commands as a temporary macro.
+- Add better tab-completion using `readline`'s completion engine.
+- Handle `SIGINT` (Ctrl+C) within the REPL to cancel the current command without exiting the shell.
+
+### 2. Multi-Provider Parity
+While we support GitLab and Bitbucket in theory, many utilities (like `sessions list --repo` and `git.ts` logic) are still heavily optimized for GitHub.
+
+**Tasks:**
+- **`src/utils/git.ts`:** Enhance `pullSessionChanges` to support GitLab and Bitbucket specific branch/PR fetch patterns if they differ from standard `fetch origin`.
+- **`src/commands/sessions.ts`:** Update `list` and `create` to better handle GitLab/Bitbucket provider prefixes without falling back to GitHub by default.
+- **`src/utils/client.ts`:** Add support for provider-specific API keys if the backend ever requires them (currently uses a unified Jules key).
+
+### 3. Template Management Enhancements
+Allow users to manage templates directly from the CLI.
+
+**Tasks:**
+- Add `julius-cli templates create` command to interactive add a new template to `templates.json`.
+- Add `julius-cli templates edit <id>` command.
+- Add `julius-cli templates delete <id>` command.
+- Add `julius-cli templates import <url|file>` to bulk load templates.
 
 ---
 
-### 2. New file: `src/utils/oauth.ts`
+## Implementation Details
 
-Responsible for the OAuth browser and device code flows.
-
-**Browser flow (PKCE + loopback):**
+### Interactive Mode In-Process Execution:
 ```typescript
-export async function runBrowserOAuthFlow(clientId: string, clientSecret: string, scopes: string[]): Promise<OAuthTokens>
-```
-- Generate PKCE verifier (`crypto.randomBytes(32).toString('base64url')`) and challenge (`SHA256(verifier)`)
-- Generate random `state` parameter
-- Find an available localhost port (try 3000+, use `net.createServer`)
-- Build Google auth URL: `https://accounts.google.com/o/oauth2/v2/auth?...`
-- Open the URL in the default browser (`open` package or `child_process.exec` with platform-specific command)
-- Start a temporary HTTP server on localhost to catch the redirect
-- Exchange the code + code_verifier for tokens via Google token endpoint
-- Return `{ accessToken, refreshToken, expiresAt }`
+// src/commands/interactive.ts
+import { cli } from '../cli.js';
 
-**Device code flow:**
-```typescript
-export async function runDeviceCodeFlow(clientId: string, scopes: string[]): Promise<OAuthTokens>
-```
-- POST to `https://oauth2.googleapis.com/device/code`
-- Print `user_code` and `verification_url` to console
-- Poll `https://oauth2.googleapis.com/token` every `interval` seconds until authorized or timed out
-
-**Token refresh:**
-```typescript
-export async function refreshAccessToken(clientId: string, clientSecret: string, refreshToken: string): Promise<{ accessToken: string; expiresAt: number }>
-```
-
-**OAuthTokens type:**
-```typescript
-export interface OAuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;     // unix ms
-  email?: string;        // from id_token if present
+// ... inside the loop
+try {
+  // Use a modified parseAsync that doesn't call process.exit
+  await cli.parseAsync(['node', 'julius-cli', ...parts]);
+} catch (err) {
+  // Handle command errors without exiting the REPL
 }
 ```
-
----
-
-### 3. New file: `src/utils/token-provider.ts`
-
-Abstracts auth so `JulesAPIClient` doesn't care which method is active.
-
-```typescript
-export interface TokenProvider {
-  getAuthHeader(): Promise<Record<string, string>>;
-}
-
-export class ApiKeyProvider implements TokenProvider {
-  constructor(private apiKey: string) {}
-  async getAuthHeader() { return { 'X-Goog-Api-Key': this.apiKey }; }
-}
-
-export class OAuthProvider implements TokenProvider {
-  constructor(private tokens: OAuthTokens, private refreshFn: () => Promise<OAuthTokens>) {}
-  async getAuthHeader() {
-    if (Date.now() >= this.tokens.expiresAt - 60_000) {
-      this.tokens = await this.refreshFn();
-      // persist updated tokens via config
-    }
-    return { 'Authorization': `Bearer ${this.tokens.accessToken}` };
-  }
-}
-```
-
----
-
-### 4. Update `src/api/client.ts`
-
-Change constructor signature:
-```typescript
-// Before
-constructor(apiKey: string, baseURL: string)
-
-// After
-constructor(private tokenProvider: TokenProvider, baseURL: string)
-```
-
-Replace the static `X-Goog-Api-Key` header with a dynamic header injected per-request using an Axios request interceptor:
-```typescript
-this.axios.interceptors.request.use(async (config) => {
-  const headers = await this.tokenProvider.getAuthHeader();
-  Object.assign(config.headers, headers);
-  return config;
-});
-```
-
-Remove the static `headers` block from `axios.create()`.
-
----
-
-### 5. Update `src/config/index.ts`
-
-Add methods for OAuth token storage:
-```typescript
-// Store/retrieve tokens as JSON in keychain (separate key from API key)
-async getOAuthTokens(): Promise<OAuthTokens | undefined>
-async setOAuthTokens(tokens: OAuthTokens): Promise<void>
-async clearOAuthTokens(): Promise<void>
-
-// Track which auth method is active in the Conf file
-getAuthMethod(): 'apikey' | 'oauth' | undefined
-setAuthMethod(method: 'apikey' | 'oauth'): void
-```
-
-Note: Use a different keychain account name for OAuth tokens (e.g., `ACCOUNT_NAME_OAUTH = 'oauth-tokens'`) to avoid colliding with the existing API key entry.
-
-Also add `authMethod` to the `Conf` schema:
-```typescript
-authMethod: {
-  type: 'string',
-  enum: ['apikey', 'oauth'],
-  default: 'apikey',
-}
-```
-
-And add to `CLIConfig` in `src/api/types.ts`:
-```typescript
-authMethod?: 'apikey' | 'oauth';
-```
-
----
-
-### 6. Update `src/utils/client.ts`
-
-`getClient()` needs to resolve the active token provider using the priority chain:
-
-```
-Priority (highest first):
-1. JULES_OAUTH_TOKEN env var → OAuthProvider (no refresh, static token)
-2. JULES_API_KEY env var → ApiKeyProvider
-3. Stored OAuth tokens (authMethod === 'oauth') → OAuthProvider with refresh
-4. Stored API key → ApiKeyProvider
-```
-
-```typescript
-export async function getClient(): Promise<JulesAPIClient> {
-  // 1. Env OAuth token
-  if (process.env.JULES_OAUTH_TOKEN) {
-    const provider = new OAuthProvider({ accessToken: process.env.JULES_OAUTH_TOKEN, ... }, ...);
-    return new JulesAPIClient(provider, config.getApiEndpoint());
-  }
-  // 2. Env API key
-  if (process.env.JULES_API_KEY) {
-    return new JulesAPIClient(new ApiKeyProvider(process.env.JULES_API_KEY), config.getApiEndpoint());
-  }
-  // 3. Stored OAuth
-  const oauthTokens = await config.getOAuthTokens();
-  if (oauthTokens && config.getAuthMethod() === 'oauth') {
-    const provider = new OAuthProvider(oauthTokens, async () => { /* refresh + persist */ });
-    return new JulesAPIClient(provider, config.getApiEndpoint());
-  }
-  // 4. Stored API key
-  const apiKey = await config.getApiKey();
-  if (apiKey) {
-    return new JulesAPIClient(new ApiKeyProvider(apiKey), config.getApiEndpoint());
-  }
-  throw new AuthError('No credentials found.', 'Run: julius-cli auth login  OR  julius-cli auth set <api-key>');
-}
-```
-
----
-
-### 7. Update `src/commands/auth.ts`
-
-Add subcommands:
-
-**`auth login`**
-```bash
-julius-cli auth login [--client-id <id>] [--client-secret <secret>] [--device-code]
-```
-- Default: browser PKCE flow
-- `--device-code`: device code flow
-- `--client-id` / `--client-secret`: optional override (falls back to env: `JULES_GOOGLE_CLIENT_ID`, `JULES_GOOGLE_CLIENT_SECRET`)
-- On success: stores tokens via `config.setOAuthTokens()`, sets `config.setAuthMethod('oauth')`
-- Prints confirmation with user email if available
-
-**`auth logout`** (alias for `auth clear`)
-```bash
-julius-cli auth logout
-```
-- Calls `config.clearApiKey()` + `config.clearOAuthTokens()` + `config.setAuthMethod('apikey')`
-
-**Update `auth status`**
-- Show `authMethod: 'oauth' | 'apikey'`
-- For OAuth: show token expiry and `email` if stored
-- For API key: existing behavior
-
-**OAuth scopes to request:**
-```
-https://www.googleapis.com/auth/cloud-platform
-```
-(Standard scope for Jules/Gemini APIs — verify against actual API if possible.)
-
----
-
-### 8. New env vars to document
-
-- `JULES_OAUTH_TOKEN` — inject a Bearer token directly (CI/automation)
-- `JULES_GOOGLE_CLIENT_ID` — OAuth client ID (alternative to `--client-id` flag)
-- `JULES_GOOGLE_CLIENT_SECRET` — OAuth client secret
-
----
-
-### 9. Test coverage to add
-
-**Unit tests (`test/unit/utils/oauth.test.ts`):**
-- PKCE verifier is 43+ chars base64url
-- PKCE challenge is correctly SHA256 hashed
-- Token provider returns `X-Goog-Api-Key` for ApiKeyProvider
-- OAuthProvider returns `Authorization: Bearer` header
-- OAuthProvider auto-refreshes when `expiresAt` is within 60s of now
-
-**Unit tests (`test/unit/commands/auth.test.ts` — extend existing):**
-- `auth login` calls OAuth flow and stores tokens
-- `auth logout` clears API key + OAuth tokens
-- `auth status` shows auth method and email for OAuth
-
-**Update existing mocks:**
-- `test/unit/commands/wait-cli.test.ts` and others that mock `config` will need `getOAuthTokens`, `getAuthMethod` added to the mock object
-- `src/utils/client.ts` mock in various tests may need updating
+*Note: May need to suppress Commander's default exit behavior using `.exitOverride()` and `.configureOutput()`.*
 
 ---
 
@@ -263,41 +70,25 @@ https://www.googleapis.com/auth/cloud-platform
 
 | File | Action |
 |------|--------|
-| `src/utils/oauth.ts` | Create — PKCE, browser flow, device flow, token refresh |
-| `src/utils/token-provider.ts` | Create — TokenProvider interface + ApiKeyProvider + OAuthProvider |
-| `src/api/client.ts` | Modify — accept TokenProvider, use request interceptor for auth header |
-| `src/api/types.ts` | Modify — add `authMethod` to CLIConfig |
-| `src/config/index.ts` | Modify — add OAuth token methods, authMethod schema |
-| `src/commands/auth.ts` | Modify — add login, logout; update status |
-| `src/utils/client.ts` | Modify — priority-chain token provider resolution |
-| `package.json` | Modify — add `google-auth-library` |
-| `test/unit/utils/oauth.test.ts` | Create |
-| `test/unit/commands/auth.test.ts` | Extend |
-| Various test mocks | Update to include new config methods |
+| `src/commands/interactive.ts` | Major refactor — switch to in-process execution |
+| `src/commands/templates.ts` | Add create/edit/delete/import subcommands |
+| `src/utils/git.ts` | Refine remote/branch handling for non-GitHub providers |
+| `src/config/templates.ts` | Add mutation methods (set, delete, clear) |
 
 ---
 
 ## Notes / Caveats
 
-- **OAuth client credentials**: Users must supply their own Google OAuth 2.0 client ID and secret registered for a "Desktop app" application type in Google Cloud Console. Document this clearly. A future enhancement could embed default credentials.
-- **Token storage security**: Store the full JSON `OAuthTokens` object as a serialized string in the keychain under account `oauth-tokens`. Don't store in the `Conf` file.
-- **Browser opening**: Use `child_process.exec` with `xdg-open` (Linux), `open` (macOS), `start` (Windows) rather than adding a new dependency. Or check if `open` package is already indirectly available.
-- **Loopback redirect**: Google allows `http://localhost:<port>` as a redirect URI for Desktop apps. The port must be registered in the Google Cloud Console (wildcard ports allowed for localhost).
-- **Backward compatibility**: `JulesAPIClient` signature change is breaking — all call sites that pass a raw API key string need updating. `getClient()` in `src/utils/client.ts` is the only public factory — update it and all tests that construct `JulesAPIClient` directly.
+- **Commander State:** When running `cli.parseAsync` multiple times in the same process, ensure global options (like `--verbose`) are reset or managed correctly.
+- **Stdio Redirection:** The REPL needs to ensure that command output (especially tables) still renders correctly to the existing TTY.
+- **Error Propagation:** Ensure that `CLIError` thrown in commands is caught by the REPL loop and printed nicely, rather than crashing the shell.
 
 ---
 
 ## Implementation Order (suggested)
 
-1. `npm install google-auth-library`
-2. `src/utils/oauth.ts` — write PKCE helpers and device flow (browser flow is more complex, do it after)
-3. `src/utils/token-provider.ts` — TokenProvider interface
-4. `src/api/types.ts` — add `authMethod` to CLIConfig
-5. `src/config/index.ts` — add OAuth methods
-6. `src/api/client.ts` — accept TokenProvider
-7. `src/utils/client.ts` — priority chain
-8. `src/commands/auth.ts` — add login/logout/update status
-9. Update all unit test mocks
-10. Add `test/unit/utils/oauth.test.ts`
-11. `npm run build && npm test` — all green
-12. Bump version to `0.6.0` in `package.json`
+1. Refactor `src/commands/interactive.ts` for in-process execution.
+2. Verify REPL state management (repo context).
+3. Enhance `templates` command with management subcommands.
+4. Audit and fix provider-specific edge cases in `git.ts` and `sessions.ts`.
+5. Update tests to cover the new interactive logic and template mutations.

@@ -1,139 +1,56 @@
-# Implementation Log
+# Julius CLI Implementation Details
 
-## Overview
-This document tracks the implementation of julius-cli, an AI-first CLI tool for the Jules REST API.
+**Version:** 0.6.0  
+**Project:** julius-cli  
 
-**Started:** 2026-04-06  
-**Current Status:** Phase 1-6 Complete (v0.5.0)  
-**Next Phase:** Advanced Features (Batch operations, Cost tracking)
+This document provides a detailed overview of the architectural decisions and implementation patterns used in the **julius-cli** project.
 
----
+## Core Architecture
 
-## Phase 1: Foundation (MVP) ✅ COMPLETED
+### 1. API Client (`src/api/client.ts`)
+- Built on top of `axios`.
+- Uses `axios-retry` for automatic handling of transient errors (5xx, 429).
+- Employs a `TokenProvider` strategy for request authentication, injecting headers via Axios request interceptors.
+- Supports both `JULES_API_URL` and `JULES_API_ENDPOINT` environment variables.
 
-### Date: 2026-04-06
+### 2. Authentication Strategy (`src/utils/token-provider.ts`)
+- **ApiKeyProvider:** Injects `X-Goog-Api-Key`.
+- **OAuthProvider:** Injects `Authorization: Bearer <token>` and handles automatic refreshes when the token is near expiration (within 60s).
+- Uses a priority-chain resolution in `getClient()` to determine the active auth method.
 
-#### 1. Project Setup ✅
-- **Completed:** Initial project structure and configuration
-- **Files Created:**
-  - `package.json` - Project manifest with dependencies
-  - `tsconfig.json` - TypeScript configuration (ES2022, ESM)
-  - `tsup.config.ts` - Build configuration with esbuild
-  - `.npmignore` - NPM publish exclusions
-  - Directory structure: `src/{api,commands,config,output,utils}`
+### 3. OAuth Implementation (`src/utils/oauth.ts`)
+- **Browser Flow:** Implements PKCE (Proof Key for Code Exchange) with a local loopback server. Features a 5-minute timeout and SIGINT handling for security.
+- **Device Code Flow:** Headless polling for authentication on restricted environments.
+- **Refresh Flow:** Securely uses stored client credentials to refresh access tokens.
 
-#### 2. Type System ✅
-- **File:** `src/api/types.ts`
-- **Interfaces Defined:**
-  - `Source`, `Session`, `Activity`, `PaginatedResponse<T>`, `CLIConfig`
-- **v0.5.0 Additions:**
-  - `WebhookConfig` - Webhook registration schema
+### 4. Configuration Management (`src/config/index.ts`)
+- **ConfigManager:** Uses the `conf` package for non-sensitive settings (endpoints, formats, polling intervals).
+- **Secure Storage:** Leverages `cross-keychain` to store API keys and OAuth secrets in the OS-level keychain.
 
-#### 3. Error Handling ✅
-- **File:** `src/utils/errors.ts`
-- **Exit Codes:** SUCCESS (0) to NETWORK_ERROR (7)
+### 5. Output Formatting (`src/output/`)
+- **JSON:** Default machine-readable output.
+- **Pretty:** Colorized, human-readable terminal output using `chalk`.
+- **Table:** Column-based data views using `cli-table3`.
+- **Streaming Support:** Optimized for continuous updates (e.g., activity tailing) by suppressing redundant headers.
 
-#### 4. Configuration System ✅
-- **File:** `src/config/index.ts`
-- Uses `conf` for local storage in `~/.config/julius-cli/config.json`.
+### 6. Command System (`src/commands/`)
+- Powered by `commander`.
+- Logic is modularized into feature-based groups (auth, sessions, activities, etc.).
+- Global error handling via `CLIError` ensure consistent exit codes and user-friendly error messages.
 
-#### 5. API Client ✅
-- **File:** `src/api/client.ts`
-- Axios-based client with exponential backoff retries and timeout support.
+### 7. Git Integration (`src/utils/git.ts`)
+- Inferred repository detection from local `.git` config.
+- Automated branch fetching and diffing to streamline the workflow between the CLI and local development environment.
 
----
+## Key Performance & Security Features
 
-## Phase 2: Interaction ✅ COMPLETED
+- **Efficient Tailing:** The `wait --follow` command persists `nextPageToken` to avoid re-fetching the entire activity history on each poll.
+- **Secure Webhooks:** The `listen` command uses HMAC-SHA256 signature verification and rate limiting to protect against malicious input.
+- **Payload Integrity:** Uses `Buffer` accumulation in the webhook listener to ensure correct UTF-8 handling across network chunks.
+- **Safe Pagination:** The `fetchAllPages` utility avoids recursive spread operations to prevent stack overflow on large datasets.
 
-### Date: 2026-04-06
+## Testing Strategy
 
-#### 1. Session Interaction Commands ✅
-- **Added:** `send`, `approve`, `cancel` commands for sessions.
-
-#### 2. Activities Commands ✅
-- **File:** `src/api/activities.ts`
-- **Added:** `list`, `get` commands for session activities.
-
----
-
-## Phase 3: Automation ✅ COMPLETED
-
-### Date: 2026-04-06
-
-#### 1. Wait/Poll Utility ✅
-- **File:** `src/commands/wait.ts`
-- Synchronous polling for session completion with `--follow` support.
-
-#### 2. Repository Inference ✅
-- **File:** `src/utils/git.ts`
-- Automatically detects GitHub repo from current directory remotes.
-
----
-
-## Phase 4: Polish ✅ COMPLETED
-
-### Date: 2026-04-06
-
-#### 1. Unit Testing ✅
-- Total tests: 110
-- Coverage: >80% across all modules.
-
-#### 2. CI/CD Integration ✅
-- GitHub Actions workflow for linting, building, and testing.
-
----
-
-## Phase 5: Templates & Git ✅ COMPLETED
-
-### Date: 2026-04-06
-
-#### 1. Session Templates ✅
-- `templates list`, `templates get`, `templates use` commands for reusable prompts.
-
-#### 2. Git Pull/Diff ✅
-- `sessions pull` and `sessions diff` for interacting with local repository state.
-
----
-
-## Phase 6: Advanced Automation & Interactivity ✅ COMPLETED
-
-### Date: 2026-04-06
-
-#### 1. Interactive Mode (REPL) ✅
-- **File:** `src/commands/interactive.ts`
-- Persistent shell session with repository context persistence.
-- Supports any `julius-cli` command within the REPL.
-
-#### 2. Webhook Support ✅
-- **File:** `src/commands/listen.ts`
-- Local HTTP server for real-time updates.
-- Supports auto-registration with `registerWebhook` endpoint.
-
-#### 3. Server-side Filtering ✅
-- **API Updates:** `list` methods in `SessionsAPI` and `ActivitiesAPI` now support an optional `filter` parameter.
-- **Command Updates:** List commands now build filter strings for the API rather than filtering locally.
-- **Efficiency:** Drastically reduced API quota usage and bandwidth consumption.
-
-#### 4. Output Formatter Refactor ✅
-- **File:** `src/output/formatter.ts`
-- Replaced nested if-statements with a registry of formatters for better maintainability.
-
----
-
-## Change Log
-
-### v0.5.0 (2026-04-06)
-- Interactive Mode (REPL)
-- Local Webhook Listener
-- Server-side Filtering
-- Output Formatter registry refactor
-
-### v0.4.0 (2026-04-06)
-- Session Templates (list, get, use)
-- Git integration (sessions pull, sessions diff)
-- Enhanced repo inference
-
-### v0.1.0 (2026-04-06)
-- Initial MVP release
-- Core session and source management
-- JSON-first output
+- **Unit Tests:** Exhaustive coverage for individual utilities, API methods, and command logic using `jest`.
+- **Integration Tests:** End-to-end flows verifying command interactions, authentication resolution, and API contract integrity.
+- **Mocks:** Uses `msw` (Mock Service Worker) for reliable API simulation in test environments.

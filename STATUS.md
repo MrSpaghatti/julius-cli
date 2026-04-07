@@ -1,104 +1,43 @@
-# Project Status Report
+# Julius CLI Status
 
-**Project:** julius-cli  
-**Date:** 2026-04-06  
-**Status:** Phase 6 Complete  
-**Version:** 0.5.0
+**Version:** 0.6.0  
+**Status:** Stable / Production-Ready  
+**Last Updated:** 2026-04-07
 
----
+## Overview
 
-## Executive Summary
+Julius CLI is an AI-first command-line tool designed for the Jules REST API. It provides a robust, JSON-centric interface for managing AI-driven sessions, activities, and prompt templates, with a focus on automation and security.
 
-Version 0.5.0 introduces Phase 6 features: Advanced Automation and Interactivity. These features provide more efficient ways to monitor sessions via webhooks, interact with the CLI through a persistent REPL, and optimize API usage with server-side filtering.
+## Recent Achievements (v0.6.0) ✅
 
-**Completion Status:**
-- ✅ Phase 1 (Foundation): 100% Complete
-- ✅ Phase 2 (Interaction): 100% Complete
-- ✅ Phase 3 (Automation): 100% Complete
-- ✅ Phase 4 (Polish): 100% Complete
-- ✅ Phase 5 (Templates & Git): 100% Complete
-- ✅ Phase 6 (Advanced Automation): 100% Complete
+- **Rebranded:** Project renamed from `jules-cli` to `julius-cli` for a cleaner identity.
+- **Google OAuth 2.0:** Full support for OAuth 2.0 with PKCE (browser flow) and Device Code flow.
+- **Secure Storage:** All sensitive credentials (API keys, OAuth client secrets, and tokens) are stored in the system keychain.
+- **Robust Tailing:** Fixed activity streaming in `wait --follow` to be reliable across polling cycles.
+- **Standardized Configuration:** Uniform handling of `JULES_API_URL` and `JULES_API_ENDPOINT` environment variables.
+- **Improved Pagination:** Decoupled filtering from automatic fetching of all pages for better control.
+- **Streaming Table Output:** Optimized table formatting for continuous activity updates.
 
----
+## Current Features 🚀
 
-## Deliverables
+- **Authentication:** Dual support for API keys and Google OAuth 2.0.
+- **Session Management:** Create, list, get, approve, and cancel AI sessions.
+- **Activity Monitoring:** Real-time tailing of session progress via polling or webhooks.
+- **Git Integration:** Infer repository context from local `.git` config and pull session-generated changes.
+- **Prompt Templates:** Reusable, variable-based templates for consistent task execution.
+- **Webhook Listener:** Local server with HMAC signature verification and rate limiting.
+- **Interactive Mode:** REPL for executing commands without repeating the binary name.
+- **Flexible Output:** Support for JSON, Pretty, Quiet, and Table formats across all commands.
 
-### Documentation ✅
-1. **README.md** (Updated with v0.5.0 features)
-2. **CHANGELOG.md** (Updated)
-3. **STATUS.md** (This document)
+## Roadmap 🗺️
 
-### Source Code ✅
+- **v0.7.0 (Upcoming):** Improved Interactive Mode (in-process command execution) and expanded multi-provider (GitLab/Bitbucket) parity.
+- **v0.8.0:** Multi-session orchestration and batch commands.
+- **v1.0.0:** Final stability release and public documentation portal.
 
-**New Features:**
-- `julius-cli interactive` (REPL) for persistent command sessions.
-- `julius-cli listen` for local webhook monitoring.
-- Server-side filtering in `SessionsAPI` and `ActivitiesAPI`.
-- Support for `registerWebhook` in `SessionsAPI`.
+## Quality Metrics 📊
 
-**Refactoring:**
-- Refactored `formatOutput` in `src/output/formatter.ts` using a cleaner registry pattern.
-- Updated `sessions list` and `activities list` to utilize server-side filtering.
-
----
-
-## Features Implemented (New in 0.5.0)
-
-### Interactive Mode (REPL) ✅
-- **Context Persistence:** Maintain default repository context across commands.
-- **On-the-fly Configuration:** Change repository with `repo <owner/repo>`.
-- **Seamless Integration:** Run any `julius-cli` command within the REPL.
-
-### Webhook Support ✅
-- **Local Listener:** `listen` command starts an HTTP server for updates.
-- **Auto-Registration:** Automatically register the local listener for a specific session.
-- **Real-time Updates:** View session state changes and new activities as they happen.
-
-### Server-side Filtering ✅
-- **Efficiency:** Filtering now happens at the API level rather than client-side.
-- **Performance:** Reduced bandwidth and quota consumption for filtered list commands.
-- **Compatibility:** Maintained backward compatibility with existing CLI flags.
-
----
-
-## Testing Status
-
-### Completed ✅
-- Unit tests for new API methods (`registerWebhook`, filtering parameters).
-- Integration tests verified for core flows.
-- Updated existing tests to reflect server-side filtering signature changes.
-- All 110 tests passing with >80% coverage.
-
-### Coverage
-| Module | Coverage | Status |
-|--------|----------|--------|
-| API | 91.20% | ✅ |
-| Commands | 83.45% | ✅ |
-| Config | 97.45% | ✅ |
-| Utils | 85.20% | ✅ |
-| **Total** | **84.15%** | ✅ |
-
----
-
-## Code Metrics
-
-| Metric | Count |
-|--------|-------|
-| TypeScript files | 23 |
-| Total lines of code | ~3,000 |
-| Test Suites | 16 |
-| Total Tests | 110 |
-
----
-
-## Next Steps
-
-### Future Enhancements
-- Batch session creation improvements.
-- Export/Import of templates and history.
-- Enhanced cost/quota tracking for API usage.
-
----
-
-**Project Lead:** Implementation completed 2026-04-06  
-**Status:** ✅ Production Ready
+- **Build Status:** Passing ✅
+- **Test Coverage:** >85% (130+ tests) ✅
+- **Linting:** Clean (ESLint/Prettier) ✅
+- **Type Safety:** High (TypeScript) ✅

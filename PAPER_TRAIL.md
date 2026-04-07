@@ -1,102 +1,41 @@
-# Paper Trail - julius-cli Implementation
+# Paper Trail - Julius CLI Implementation
 
+**Version:** 0.6.0  
+**Last Updated:** 2026-04-07  
 **Project:** julius-cli  
-**Implementation Date:** 2026-04-06  
-**Implementer:** GitHub Copilot CLI  
-**Status:** Phase 1-6 Complete
 
----
+This document serves as a comprehensive paper trail of the core implementation and significant refactors performed during the development of **julius-cli**.
 
-## Summary of Work Completed
+## Implementation Milestones
 
-This document serves as a comprehensive paper trail of all work performed during the implementation of julius-cli, an AI-first CLI tool for the Jules REST API.
+### v0.6.0 - Security Hardening & Rebranding (Current)
+- **Project Rebranding:** Renamed `jules-cli` to `julius-cli` globally across binary, package, code, and documentation.
+- **Credential Hardening:** Moved OAuth client secrets and tokens into the OS-level keychain (`cross-keychain`).
+- **Activity Tailing Fix:** Resolved the "re-fetch history" bug in `wait --follow` by persisting `nextPageToken` and implementing an initialization pass.
+- **Streaming Table Output:** Optimized `formatOutput` and `formatTableActivities` to support suppressed headers for activity updates.
+- **Robust API Handling:** Introduced defensive parsing for all list-based API responses (sessions, activities) to prevent crashes on empty collections.
+- **Standardized Configuration:** Uniformed endpoint handling with support for `JULES_API_URL` and `JULES_API_ENDPOINT`.
+- **Command Injection Prevention:** Implemented regex escaping for prompt templates using a dedicated helper.
 
-### Implementation Timeline
+### v0.5.x - Google OAuth 2.0 & Webhooks
+- **OAuth 2.0 Support:** Implemented browser flow (PKCE) and device code flow using `google-auth-library`.
+- **Secure Webhooks:** Added HMAC signature verification and rate limiting to the `listen` command.
+- **Automation Logic:** Enhanced `sessions create` with `--wait` and `--follow` flags for seamless automation.
 
-**Start Time:** 2026-04-06 21:22:34 UTC  
-**Completion Time:** 2026-04-06 23:45:12 UTC  
-**Total Duration:** ~2.5 hours (Multiple Sessions)
+### v0.4.x - Optimization & API Parity
+- **Polling Efficiency:** Initial improvements to polling logic to reduce API load.
+- **Git Context:** Basic repository inference from local Git remotes.
+- **Template System:** Introduced the `templates` command group for reusable task prompts.
 
----
+### v0.3.x - Core Architecture
+- **Base Client:** Established the `JulesAPIClient` with `axios` and `axios-retry`.
+- **Formatting Engine:** Created the `json`, `pretty`, and `table` output formatters.
+- **Authentication:** Initial API key storage implementation in the keychain.
 
-## Files Created/Modified
+## Rationale for Key Changes
 
-### v0.5.0: Advanced Automation & Interactivity (2026-04-06)
-
-1.  **Interactive Mode**: Created `src/commands/interactive.ts` (REPL).
-2.  **Webhook Support**: Created `src/commands/listen.ts` and updated `src/api/sessions.ts`.
-3.  **Server-side Filtering**: Updated `src/api/sessions.ts`, `src/api/activities.ts`, `src/commands/sessions.ts`, and `src/commands/activities.ts`.
-4.  **Output Refactor**: Refactored `src/output/formatter.ts`.
-5.  **Types**: Updated `src/api/types.ts` with `WebhookConfig`.
-6.  **CLI**: Registered new commands in `src/cli.ts` and bumped version to 0.5.0.
-7.  **Tests**: Updated `test/unit/commands/sessions.test.ts` and `test/unit/commands/activities.test.ts`.
-
-### v0.4.0: Templates & Local Git Integration (2026-04-06)
-
-1.  **Improved Git Inference**: Enhanced `src/utils/git.ts` to handle more GitHub URL formats.
-2.  **Session Templates**: Implemented `src/commands/templates.ts`.
-3.  **Local Git Actions**: Added `sessions pull` and `sessions diff`.
-4.  **Refactoring**: Centralized client acquisition in `src/utils/client.ts`.
-
-### v0.1.0 - v0.3.0: Foundation & Automation (2026-04-06)
-
-1.  **Core API**: `src/api/{client,sessions,sources,activities}.ts`.
-2.  **Wait Command**: `src/commands/wait.ts` with follow mode.
-3.  **Config**: `src/config/index.ts` and `src/commands/config.ts`.
-4.  **Inference**: Initial `src/utils/git.ts`.
-5.  **Output**: `src/output/{formatter,json,pretty,table}.ts`.
-
----
-
-## Implementation Details
-
-### Phase 6: Advanced Automation (Complete)
-
-**Completed Tasks:**
-1. ✅ **Interactive Mode (REPL)**: Persistent shell with repository context.
-2. ✅ **Webhook Listener**: Local HTTP server for real-time updates.
-3. ✅ **Server-side Filtering**: Drastically reduced API quota usage.
-4. ✅ **Output Registry**: Cleaner, more maintainable formatting logic.
-
-### Phase 5: Templates & Git (Complete)
-
-**Completed Tasks:**
-1. ✅ **Templates**: Reusable prompts with variable substitution.
-2. ✅ **Git Integration**: Direct interaction with local repo state.
-3. ✅ **Robust Inference**: Multi-provider support for repo detection.
-
----
-
-## Technical Specifications
-
-### v0.5.0 Improvements
-- **Interactive REPL**: Uses `node:readline/promises`.
-- **Webhook Listener**: Uses `node:http`.
-- **Filter Syntax**: Google-style filters (e.g., `state = "COMPLETED"`).
-- **Version**: 0.5.0
-
----
-
-## Testing Results
-
-- **Total Tests**: 110
-- **Passing**: 110
-- **Failed**: 0
-- **Coverage**: >84% (Global)
-
----
-
-## Deliverable Summary
-
-### Code Deliverables
-- ✅ 23 TypeScript source files
-- ✅ 18 CLI commands
-- ✅ 11 API methods (including registerWebhook)
-- ✅ Registry-based output system
-- ✅ 110 automated tests
-
----
-
-## Sign-off
-
-**v0.5.0 implementation completed successfully on 2026-04-06**
+- **Renaming to Julius:** Improved identity clarity and consistency with the "AI Agent" positioning.
+- **Keychain vs. Config:** Moved sensitive data (OAuth secrets) from plaintext JSON to the system keychain to meet security best practices.
+- **TokenProvider Pattern:** Decoupled `JulesAPIClient` from specific auth methods, allowing for easier expansion to new authentication strategies in the future.
+- **Buffer Accumulation:** Replaced string-based chunk processing in webhooks with `Buffer` to prevent UTF-8 corruption, essential for reliability in internationalized environments.
+- **Loop-based Pagination:** Switched from spread operators to explicit loops in `fetchAllPages` to ensure stability when dealing with massive datasets that exceed the JavaScript stack limit.
