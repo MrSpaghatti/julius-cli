@@ -15,6 +15,8 @@ export interface WaitCommandOptions {
   format?: OutputFormat;
   verbose?: boolean;
   follow?: boolean;
+  activityTypes?: string[];
+  noSpinner?: boolean;
 }
 
 const TERMINAL_STATES: SessionState[] = ['COMPLETED', 'FAILED', 'CANCELLED'];
@@ -28,6 +30,8 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
     format = 'json',
     verbose = false,
     follow = false,
+    activityTypes,
+    noSpinner = false,
   } = options;
 
   const sessionsAPI = new SessionsAPI(client);
@@ -40,8 +44,8 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
   const targetStates = state ? [state] : TERMINAL_STATES;
 
   let spinner: any;
-  if (format === 'pretty' && !verbose && !follow) {
-    spinner = ora(`Waiting for session ${sessionId} to reach state: ${targetStates.join(' or ')}`).start();
+  if (format === 'pretty' && !verbose && !follow && !noSpinner) {
+    spinner = ora(`Waiting for session ${sessionId} (target: ${targetStates.join('/')})...`).start();
   }
 
   let lastSession: Session | null = null;
@@ -54,7 +58,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
 
     // Check timeout
     if (elapsed >= timeoutMs) {
-      if (spinner) spinner.fail();
+      if (spinner) spinner.fail(`Timeout reached for session ${sessionId}`);
       throw new CLIError(
         `Timeout waiting for session ${sessionId} after ${timeout} seconds. Last state: ${lastSession?.state || 'UNKNOWN'}`,
         ExitCode.TIMEOUT
@@ -93,6 +97,12 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
             }
           }
 
+          // Filter by activity type if provided
+          if (activityTypes && activityTypes.length > 0) {
+            const typeSet = new Set(activityTypes.map(t => t.toUpperCase()));
+            newActivities = newActivities.filter(a => typeSet.has(a.type));
+          }
+
           // Output new activities in chronological order
           for (const activity of newActivities) {
             output(activity, format, 'activity');
@@ -129,7 +139,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
       
       // If it's a 404, the session is gone, so stop.
       if (error.status === 404) {
-        if (spinner) spinner.fail();
+        if (spinner) spinner.fail(`Session ${sessionId} not found.`);
         throw error;
       }
 

@@ -2,28 +2,33 @@ import { Command } from 'commander';
 import { config } from '../config/index.js';
 import { JulesAPIClient } from '../api/client.js';
 import { waitCommand } from './wait.js';
-import { handleError, CLIError } from '../utils/errors.js';
+import { handleError, CLIError, ExitCode } from '../utils/errors.js';
 import type { SessionState, OutputFormat } from '../api/types.js';
 
 export function createWaitCommand(): Command {
   const wait = new Command('wait');
 
+  const defaultPollInterval = config.get('pollInterval') || 5000;
+  const defaultMaxPollAttempts = config.get('maxPollAttempts') || 120;
+  const defaultTimeout = (defaultMaxPollAttempts * (defaultPollInterval / 1000)).toString();
+
   wait
-    .description('Wait for a session to reach a specific state (blocks until completion)')
-    .argument('<session-id>', 'Session ID to wait for')
-    .option('-t, --timeout <seconds>', 'Timeout in seconds (default: 600)', config.get('maxPollAttempts') ? (config.get('maxPollAttempts')! * (config.get('pollInterval')! / 1000)).toString() : '600')
-    .option('-i, --interval <seconds>', 'Poll interval in seconds (default: 5)', (config.get('pollInterval')! / 1000).toString() || '5')
+    .description('Wait for one or more sessions to reach a specific state (blocks until completion)')
+    .argument('<session-ids...>', 'Session IDs to wait for')
+    .option('-t, --timeout <seconds>', 'Timeout in seconds (default: 600)', defaultTimeout)
+    .option('-i, --interval <seconds>', 'Poll interval in seconds (default: 5)', (defaultPollInterval / 1000).toString())
     .option('-s, --state <state>', 'Wait for specific state (default: COMPLETED, FAILED, or CANCELLED)')
-    .option('-f, --format <format>', 'Output format: json, pretty, quiet', config.get('defaultFormat') || 'json')
+    .option('-f, --format <format>', 'Output format: json, pretty, quiet, table', config.get('defaultFormat') || 'json')
     .option('--follow', 'Stream activity updates while waiting')
+    .option('--activity-type <types...>', 'Filter streamed activities by type (PLAN, MESSAGE, PROGRESS, ERROR)')
     .option('--verbose', 'Enable verbose logging')
-    .action(async (sessionId: string, options: any) => {
+    .action(async (sessionIds: string[], options: any) => {
       try {
         const apiKey = await config.getApiKey();
         const apiEndpoint = config.getApiEndpoint();
 
         if (!apiKey) {
-          throw new CLIError('API key not set. Run: jules-cli auth set <api-key>', 3);
+          throw new CLIError('API key not set. Run: jules-cli auth set <api-key>', ExitCode.AUTH_ERROR);
         }
 
         const client = new JulesAPIClient(apiKey, apiEndpoint);
@@ -33,11 +38,11 @@ export function createWaitCommand(): Command {
         const interval = parseInt(options.interval, 10);
 
         if (isNaN(timeout) || timeout <= 0) {
-          throw new CLIError('Timeout must be a positive number', 2);
+          throw new CLIError('Timeout must be a positive number', ExitCode.INVALID_ARGS);
         }
 
         if (isNaN(interval) || interval <= 0) {
-          throw new CLIError('Interval must be a positive number', 2);
+          throw new CLIError('Interval must be a positive number', ExitCode.INVALID_ARGS);
         }
 
         // Validate state if provided
@@ -54,19 +59,26 @@ export function createWaitCommand(): Command {
         if (options.state && !validStates.includes(options.state as SessionState)) {
           throw new CLIError(
             `Invalid state: ${options.state}. Valid states: ${validStates.join(', ')}`,
-            2
+            ExitCode.INVALID_ARGS
           );
         }
 
-        await waitCommand(client, {
-          sessionId,
-          timeout,
-          interval,
-          state: options.state as SessionState | undefined,
-          format: options.format as OutputFormat,
-          verbose: !!options.verbose,
-          follow: !!options.follow,
-        });
+        // If multiple sessions, we run them in parallel
+        const waitPromises = sessionIds.map(sessionId => 
+          waitCommand(client, {
+            sessionId,
+            timeout,
+            interval,
+            state: options.state as SessionState | undefined,
+            format: options.format as OutputFormat,
+            verbose: !!options.verbose,
+            follow: !!options.follow,
+            activityTypes: options.activityType,
+            noSpinner: sessionIds.length > 1,
+          })
+        );
+
+        await Promise.all(waitPromises);
       } catch (error) {
         handleError(error);
       }

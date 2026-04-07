@@ -12,7 +12,7 @@ export const cli = new Command();
 cli
   .name('jules-cli')
   .description('AI-first CLI for Jules REST API with JSON output and full automation support')
-  .version('0.2.0');
+  .version('0.3.0');
 
 // Global options
 cli.option('--verbose', 'Enable verbose logging');

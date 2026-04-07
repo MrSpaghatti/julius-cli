@@ -11,7 +11,8 @@ async function getClient(): Promise<JulesAPIClient> {
   const apiKey = await config.getApiKey();
   if (!apiKey) {
     throw new AuthError(
-      'No API key found. Set one with: jules-cli auth set <key>'
+      'No API key found.',
+      'Set one with: jules-cli auth set <key>'
     );
   }
   return new JulesAPIClient(apiKey, config.getApiEndpoint());
@@ -95,7 +96,7 @@ export function createActivitiesCommands(): Command {
             sessionId,
             activities: filteredItems,
             nextPageToken: result.nextPageToken,
-            totalSize: filteredItems.length,
+            totalSize: result.totalSize,
           },
           options.format,
           'activity'

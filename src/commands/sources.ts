@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import ora from 'ora';
 import { config } from '../config/index.js';
 import { JulesAPIClient } from '../api/client.js';
 import { SourcesAPI } from '../api/sources.js';
@@ -11,7 +12,8 @@ async function getClient(): Promise<JulesAPIClient> {
   const apiKey = await config.getApiKey();
   if (!apiKey) {
     throw new AuthError(
-      'No API key found. Set one with: jules-cli auth set <key>'
+      'No API key found.',
+      'Set one with: jules-cli auth set <key>'
     );
   }
   return new JulesAPIClient(apiKey, config.getApiEndpoint());
@@ -26,7 +28,7 @@ export function createSourcesCommands(): Command {
     .option('--page-size <n>', 'Results per page (max 100)', config.get('defaultPageSize')?.toString() || '30')
     .option('--page-token <token>', 'Pagination token from previous response')
     .option('--all', 'Fetch all repositories (automatically follows nextPageToken)')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet|table)', config.get('defaultFormat') || 'json')
     .action(async (options: {
       pageSize: string;
       pageToken?: string;
@@ -41,11 +43,20 @@ export function createSourcesCommands(): Command {
         throw new InvalidArgsError('Page size must be between 1 and 100');
       }
 
+      let spinner;
+      if (options.format === 'pretty' && options.all) {
+        spinner = ora('Fetching all repositories...').start();
+      }
+
       let result;
       if (options.all) {
         result = await fetchAllPages((token, size) => api.list(size, token), 100);
       } else {
         result = await api.list(pageSize, options.pageToken);
+      }
+
+      if (spinner) {
+        spinner.stop();
       }
 
       if (options.format === 'pretty') {
@@ -76,7 +87,7 @@ export function createSourcesCommands(): Command {
     .command('get')
     .description('Get details for a specific source')
     .argument('<source-id>', 'Source ID (e.g., github/owner/repo)')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet|table)', config.get('defaultFormat') || 'json')
     .action(async (sourceId: string, options: { format: OutputFormat }) => {
       const client = await getClient();
       const api = new SourcesAPI(client);

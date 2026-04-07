@@ -14,7 +14,8 @@ export enum ExitCode {
 export class CLIError extends Error {
   constructor(
     message: string,
-    public exitCode: ExitCode = ExitCode.GENERAL_ERROR
+    public exitCode: ExitCode = ExitCode.GENERAL_ERROR,
+    public hint?: string
   ) {
     super(message);
     this.name = 'CLIError';
@@ -22,8 +23,8 @@ export class CLIError extends Error {
 }
 
 export class AuthError extends CLIError {
-  constructor(message: string) {
-    super(message, ExitCode.AUTH_ERROR);
+  constructor(message: string, hint?: string) {
+    super(message, ExitCode.AUTH_ERROR, hint);
     this.name = 'AuthError';
   }
 }
@@ -31,37 +32,38 @@ export class AuthError extends CLIError {
 export class APIError extends CLIError {
   constructor(
     message: string,
-    public statusCode?: number
+    public statusCode?: number,
+    hint?: string
   ) {
-    super(message, ExitCode.API_ERROR);
+    super(message, ExitCode.API_ERROR, hint);
     this.name = 'APIError';
   }
 }
 
 export class NotFoundError extends CLIError {
-  constructor(resource: string, id: string) {
-    super(`${resource} not found: ${id}`, ExitCode.NOT_FOUND);
+  constructor(resource: string, id: string, hint?: string) {
+    super(`${resource} not found: ${id}`, ExitCode.NOT_FOUND, hint);
     this.name = 'NotFoundError';
   }
 }
 
 export class InvalidArgsError extends CLIError {
-  constructor(message: string) {
-    super(message, ExitCode.INVALID_ARGS);
+  constructor(message: string, hint?: string) {
+    super(message, ExitCode.INVALID_ARGS, hint);
     this.name = 'InvalidArgsError';
   }
 }
 
 export class TimeoutError extends CLIError {
-  constructor(message: string) {
-    super(message, ExitCode.TIMEOUT);
+  constructor(message: string, hint?: string) {
+    super(message, ExitCode.TIMEOUT, hint);
     this.name = 'TimeoutError';
   }
 }
 
 export class NetworkError extends CLIError {
-  constructor(message: string) {
-    super(message, ExitCode.NETWORK_ERROR);
+  constructor(message: string, hint?: string) {
+    super(message, ExitCode.NETWORK_ERROR, hint);
     this.name = 'NetworkError';
   }
 }
@@ -69,6 +71,9 @@ export class NetworkError extends CLIError {
 export function handleError(error: unknown): never {
   if (error instanceof CLIError) {
     console.error(`Error: ${error.message}`);
+    if (error.hint) {
+      console.error(`Hint: ${error.hint}`);
+    }
     process.exit(error.exitCode);
   }
 

@@ -101,7 +101,9 @@ jules-cli sessions create \
   [--title "Session title"] \
   [--branch "starting-branch"] \
   [--auto-pr] \
-  [--require-approval]
+  [--require-approval] \
+  [--wait] \
+  [--follow]
 
 # List all sessions
 jules-cli sessions list \

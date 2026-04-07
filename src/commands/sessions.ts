@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import ora from 'ora';
 import { config } from '../config/index.js';
 import { JulesAPIClient } from '../api/client.js';
 import { SessionsAPI } from '../api/sessions.js';
@@ -6,13 +7,15 @@ import { output } from '../output/formatter.js';
 import { AuthError, InvalidArgsError } from '../utils/errors.js';
 import { inferGitHubRepo } from '../utils/git.js';
 import { fetchAllPages } from '../utils/pagination.js';
-import type { OutputFormat, SessionState } from '../api/types.js';
+import { waitCommand } from './wait.js';
+import type { OutputFormat } from '../api/types.js';
 
 async function getClient(): Promise<JulesAPIClient> {
   const apiKey = await config.getApiKey();
   if (!apiKey) {
     throw new AuthError(
-      'No API key found. Set one with: jules-cli auth set <key>'
+      'No API key found.',
+      'Set one with: jules-cli auth set <key>'
     );
   }
   return new JulesAPIClient(apiKey, config.getApiEndpoint());
@@ -30,7 +33,9 @@ export function createSessionsCommands(): Command {
     .option('-b, --branch <branch>', 'Starting branch (default: main)')
     .option('--auto-pr', 'Automatically create PR when done')
     .option('--require-approval', 'Require plan approval before execution')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
+    .option('-w, --wait', 'Block until session completes (implies --follow)')
+    .option('--follow', 'Stream activity updates while waiting')
+    .option('--format <format>', 'Output format (json|pretty|quiet|table)', config.get('defaultFormat') || 'json')
     .action(async (options: {
       repo?: string;
       prompt: string;
@@ -38,12 +43,18 @@ export function createSessionsCommands(): Command {
       branch?: string;
       autoPr?: boolean;
       requireApproval?: boolean;
+      wait?: boolean;
+      follow?: boolean;
       format: OutputFormat;
     }) => {
       const client = await getClient();
       const api = new SessionsAPI(client);
 
       const repo = options.repo || inferGitHubRepo();
+
+      if (options.prompt.length > 10000) {
+        throw new InvalidArgsError('Prompt is too long (max 10,000 characters)');
+      }
 
       // Parse repo into source format
       const repoParts = repo.split('/');
@@ -55,6 +66,11 @@ export function createSessionsCommands(): Command {
 
       const sourceId = `github/${repo}`;
       const source = `sources/${sourceId}`;
+
+      let spinner;
+      if (options.format === 'pretty' && !options.wait && !options.follow) {
+        spinner = ora(`Creating session for ${repo}...`).start();
+      }
 
       const session = await api.create({
         prompt: options.prompt,
@@ -69,7 +85,27 @@ export function createSessionsCommands(): Command {
         requirePlanApproval: options.requireApproval || false,
       });
 
+      if (spinner) {
+        spinner.succeed(`Session created: ${session.id}`);
+        console.log('');
+      }
+
       output(session, options.format, 'session');
+
+      if (options.wait || options.follow) {
+        if (options.format === 'pretty') {
+          console.log('\n--- Waiting for Session Completion ---\n');
+        }
+        await waitCommand(client, {
+          sessionId: session.id,
+          format: options.format,
+          follow: true, // both --wait and --follow should follow
+          interval: config.get('pollInterval') ? (config.get('pollInterval')! / 1000) : 5,
+          timeout: config.get('maxPollAttempts') && config.get('pollInterval')
+            ? (config.get('maxPollAttempts')! * config.get('pollInterval')! / 1000)
+            : 600,
+        });
+      }
     });
 
   sessions
@@ -80,7 +116,7 @@ export function createSessionsCommands(): Command {
     .option('--page-size <n>', 'Results per page (max 100)', config.get('defaultPageSize')?.toString() || '30')
     .option('--page-token <token>', 'Pagination token from previous response')
     .option('--all', 'Fetch all sessions (automatically follows nextPageToken)')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet|table)', config.get('defaultFormat') || 'json')
     .action(async (options: {
       repo?: string;
       state?: string[];
@@ -101,13 +137,19 @@ export function createSessionsCommands(): Command {
       const hasFilters = !!options.repo || (options.state && options.state.length > 0);
       const shouldFetchAll = options.all || hasFilters;
 
+      let spinner;
+      if (options.format === 'pretty' && shouldFetchAll) {
+        spinner = ora('Fetching all pages...').start();
+      }
+
       if (shouldFetchAll) {
-        if (hasFilters && !options.all && options.format === 'pretty') {
-          console.log('Fetching all pages for accurate filtering...');
-        }
         result = await fetchAllPages((token, size) => api.list(size, token), 100);
       } else {
         result = await api.list(pageSize, options.pageToken);
+      }
+
+      if (spinner) {
+        spinner.stop();
       }
 
       // Client-side filtering
@@ -141,7 +183,7 @@ export function createSessionsCommands(): Command {
           {
             sessions: filteredItems,
             nextPageToken: result.nextPageToken,
-            totalSize: filteredItems.length,
+            totalSize: result.totalSize,
           },
           options.format,
           'session'
@@ -153,7 +195,7 @@ export function createSessionsCommands(): Command {
     .command('get')
     .description('Get session details')
     .argument('<session-id>', 'Session ID')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet|table)', config.get('defaultFormat') || 'json')
     .action(async (sessionId: string, options: { format: OutputFormat }) => {
       const client = await getClient();
       const api = new SessionsAPI(client);
@@ -168,13 +210,17 @@ export function createSessionsCommands(): Command {
     .description('Send a message to an active session')
     .argument('<session-id>', 'Session ID')
     .requiredOption('-m, --message <message>', 'Message to send')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet|table)', config.get('defaultFormat') || 'json')
     .action(async (
       sessionId: string,
       options: { message: string; format: OutputFormat }
     ) => {
       const client = await getClient();
       const api = new SessionsAPI(client);
+
+      if (options.message.length > 10000) {
+        throw new InvalidArgsError('Message is too long (max 10,000 characters)');
+      }
 
       await api.sendMessage(sessionId, options.message);
 
@@ -192,7 +238,7 @@ export function createSessionsCommands(): Command {
     .command('approve')
     .description('Approve the plan for a session')
     .argument('<session-id>', 'Session ID')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet|table)', config.get('defaultFormat') || 'json')
     .action(async (sessionId: string, options: { format: OutputFormat }) => {
       const client = await getClient();
       const api = new SessionsAPI(client);
@@ -213,7 +259,7 @@ export function createSessionsCommands(): Command {
     .command('cancel')
     .description('Cancel a running session')
     .argument('<session-id>', 'Session ID')
-    .option('--format <format>', 'Output format (json|pretty|quiet)', config.get('defaultFormat') || 'json')
+    .option('--format <format>', 'Output format (json|pretty|quiet|table)', config.get('defaultFormat') || 'json')
     .action(async (sessionId: string, options: { format: OutputFormat }) => {
       const client = await getClient();
       const api = new SessionsAPI(client);

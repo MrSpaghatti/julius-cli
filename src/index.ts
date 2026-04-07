@@ -1,6 +1,6 @@
 import { cli } from './cli.js';
+import { handleError } from './utils/errors.js';
 
 cli.parseAsync(process.argv).catch((error) => {
-  console.error(error.message);
-  process.exit(1);
+  handleError(error);
 });

@@ -2,10 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-04-06
+
+### Added
+- **Progress Indicators:** Visual feedback via `ora` spinners for `sessions create`, `sessions list --all`, and `sources list --all`.
+- **Enhanced Wait Command:** Support for waiting on multiple session IDs in parallel (`jules-cli wait <id1> <id2>`).
+- **Activity Filtering:** Filter streamed activities in `wait --follow` using `--activity-type <types...>`.
+- **Integration Tests:** Established a comprehensive integration test suite for full command-line flows.
+- **CI/CD Pipeline:** GitHub Actions workflow for automated build, lint, and test on every push.
+- **Security Audit:** Conducted a final review of `cross-keychain` and enforced prompt/message length limits.
+
+### Changed
+- **Actionable Errors:** Updated error messages to include helpful hints for easier troubleshooting.
+- **Enhanced Coverage:** Increased unit test coverage to over 80%.
+- **Robust Defaults:** Improved default value logic for timeout and poll interval in the `wait` command.
+
 ## [0.2.0] - 2026-04-06
+
 
 ### Added
 - **Secure Storage:** API key is now stored in the OS Keychain using `cross-keychain`.
