@@ -7,11 +7,15 @@ export class ActivitiesAPI {
   async list(
     sessionId: string,
     pageSize: number = 30,
-    pageToken?: string
+    pageToken?: string,
+    filter?: string
   ): Promise<PaginatedResponse<Activity>> {
     const params: any = { pageSize };
     if (pageToken) {
       params.pageToken = pageToken;
+    }
+    if (filter) {
+      params.filter = filter;
     }
 
     const response = await this.client.get<any>(

@@ -54,7 +54,7 @@ describe('Activities Commands', () => {
       const root = new Command().addCommand(activitiesCmd);
       await root.parseAsync(['node', 'test', 'activities', 'list', '123']);
 
-      expect(mockActivitiesAPIInstance.list).toHaveBeenCalledWith('123', 30, undefined);
+      expect(mockActivitiesAPIInstance.list).toHaveBeenCalledWith('123', 30, undefined, undefined);
       expect(output).toHaveBeenCalled();
     });
 
@@ -62,7 +62,6 @@ describe('Activities Commands', () => {
       const mockResult = {
         items: [
           { id: '1', type: 'PLAN' },
-          { id: '2', type: 'MESSAGE' },
         ]
       };
       (fetchAllPages as any).mockResolvedValue(mockResult);
@@ -72,7 +71,7 @@ describe('Activities Commands', () => {
 
       expect(fetchAllPages).toHaveBeenCalled();
       expect(output).toHaveBeenCalledWith(
-        expect.objectContaining({ activities: [mockResult.items[0]] }),
+        expect.objectContaining({ activities: mockResult.items }),
         'json',
         'activity'
       );
@@ -81,7 +80,6 @@ describe('Activities Commands', () => {
     it('should filter by author', async () => {
       const mockResult = {
         items: [
-          { id: '1', author: 'USER' },
           { id: '2', author: 'AGENT' },
         ]
       };
@@ -91,7 +89,7 @@ describe('Activities Commands', () => {
       await root.parseAsync(['node', 'test', 'activities', 'list', '123', '--author', 'AGENT']);
 
       expect(output).toHaveBeenCalledWith(
-        expect.objectContaining({ activities: [mockResult.items[1]] }),
+        expect.objectContaining({ activities: mockResult.items }),
         'json',
         'activity'
       );

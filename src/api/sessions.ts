@@ -1,5 +1,10 @@
 import type { JulesAPIClient } from './client.js';
-import type { Session, PaginatedResponse, AutomationMode } from './types.js';
+import type {
+  Session,
+  PaginatedResponse,
+  AutomationMode,
+  WebhookConfig,
+} from './types.js';
 
 export interface CreateSessionParams {
   prompt: string;
@@ -21,10 +26,17 @@ export class SessionsAPI {
     return this.client.post<Session>('/sessions', params);
   }
 
-  async list(pageSize: number = 30, pageToken?: string): Promise<PaginatedResponse<Session>> {
+  async list(
+    pageSize: number = 30,
+    pageToken?: string,
+    filter?: string
+  ): Promise<PaginatedResponse<Session>> {
     const params: any = { pageSize };
     if (pageToken) {
       params.pageToken = pageToken;
+    }
+    if (filter) {
+      params.filter = filter;
     }
 
     const response = await this.client.get<any>('/sessions', params);
@@ -50,5 +62,12 @@ export class SessionsAPI {
 
   async cancel(sessionId: string): Promise<void> {
     await this.client.post(`/sessions/${sessionId}:cancel`, {});
+  }
+
+  async registerWebhook(
+    sessionId: string,
+    config: WebhookConfig
+  ): Promise<void> {
+    await this.client.post(`/sessions/${sessionId}:registerWebhook`, config);
   }
 }

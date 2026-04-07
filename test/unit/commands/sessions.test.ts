@@ -157,7 +157,6 @@ describe('Sessions Commands', () => {
       const mockResult = {
         items: [
           { id: '1', sourceContext: { source: 'sources/github/owner/repo1' } },
-          { id: '2', sourceContext: { source: 'sources/github/owner/repo2' } },
         ],
       };
       (fetchAllPages as any).mockResolvedValue(mockResult);
@@ -175,7 +174,7 @@ describe('Sessions Commands', () => {
       // Filtering by repo triggers fetchAllPages
       expect(fetchAllPages).toHaveBeenCalled();
       expect(output).toHaveBeenCalledWith(
-        expect.objectContaining({ sessions: [mockResult.items[0]] }),
+        expect.objectContaining({ sessions: mockResult.items }),
         'json',
         'session'
       );

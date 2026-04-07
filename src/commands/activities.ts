@@ -39,42 +39,39 @@ export function createActivitiesCommands(): Command {
         throw new InvalidArgsError('Page size must be between 1 and 100');
       }
 
+      const filters: string[] = [];
+      if (options.type && options.type.length > 0) {
+        const typeFilters = options.type
+          .map((t) => `type = "${t}"`)
+          .join(' OR ');
+        filters.push(`(${typeFilters})`);
+      }
+      if (options.author) {
+        filters.push(`author = "${options.author}"`);
+      }
+      const filter = filters.length > 0 ? filters.join(' AND ') : undefined;
+
       let result;
-      const hasFilters = !!options.author || (options.type && options.type.length > 0);
+      const hasFilters = filters.length > 0;
       const shouldFetchAll = options.all || hasFilters;
 
-      if (hasFilters && !options.all && options.format !== 'quiet') {
-        console.warn('Warning: Client-side filtering implies fetching all pages, which may take a long time or consume significant API quota.');
-      }
-
       if (shouldFetchAll) {
-        result = await fetchAllPages((token, size) => api.list(sessionId, size, token), 100);
+        result = await fetchAllPages(
+          (token, size) => api.list(sessionId, size, token, filter),
+          100
+        );
       } else {
-        result = await api.list(sessionId, pageSize, options.pageToken);
+        result = await api.list(sessionId, pageSize, options.pageToken, filter);
       }
 
-      // Client-side filtering
-      let filteredItems = result.items;
-
-      if (options.type && options.type.length > 0) {
-        const typeFilter = new Set(options.type);
-        filteredItems = filteredItems.filter((activity) =>
-          typeFilter.has(activity.type)
-        );
-      }
-
-      if (options.author) {
-        filteredItems = filteredItems.filter(
-          (activity) => activity.author === options.author
-        );
-      }
+      const items = result.items;
 
       if (options.format === 'pretty') {
         console.log(`Activities for session ${sessionId}:\n`);
-        for (const activity of filteredItems) {
+        for (const activity of items) {
           output(activity, 'pretty', 'activity');
         }
-        console.log(`Total: ${filteredItems.length} activities`);
+        console.log(`Total: ${items.length} activities`);
         if (!shouldFetchAll && result.nextPageToken) {
           console.log(
             `\nNext page: jules-cli activities list ${sessionId} --page-token ${result.nextPageToken}`
@@ -84,7 +81,7 @@ export function createActivitiesCommands(): Command {
         output(
           {
             sessionId,
-            activities: filteredItems,
+            activities: items,
             nextPageToken: result.nextPageToken,
             totalSize: result.totalSize,
           },

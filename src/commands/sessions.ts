@@ -158,14 +158,21 @@ export function createSessionsCommands(): Command {
           throw new InvalidArgsError('Page size must be between 1 and 100');
         }
 
-        let result;
-        const hasFilters =
-          !!options.repo || (options.state && options.state.length > 0);
-        const shouldFetchAll = options.all || hasFilters;
-
-        if (hasFilters && !options.all && options.format !== 'quiet') {
-          console.warn('Warning: Client-side filtering implies fetching all pages, which may take a long time or consume significant API quota.');
+        const filters: string[] = [];
+        if (options.repo) {
+          filters.push(`source = "sources/github/${options.repo}"`);
         }
+        if (options.state && options.state.length > 0) {
+          const stateFilters = options.state
+            .map((s) => `state = "${s}"`)
+            .join(' OR ');
+          filters.push(`(${stateFilters})`);
+        }
+        const filter = filters.length > 0 ? filters.join(' AND ') : undefined;
+
+        let result;
+        const hasFilters = filters.length > 0;
+        const shouldFetchAll = options.all || hasFilters;
 
         let spinner;
         if (options.format === 'pretty' && shouldFetchAll) {
@@ -174,40 +181,25 @@ export function createSessionsCommands(): Command {
 
         if (shouldFetchAll) {
           result = await fetchAllPages(
-            (token, size) => api.list(size, token),
+            (token, size) => api.list(size, token, filter),
             100
           );
         } else {
-          result = await api.list(pageSize, options.pageToken);
+          result = await api.list(pageSize, options.pageToken, filter);
         }
 
         if (spinner) {
           spinner.stop();
         }
 
-        // Client-side filtering
-        let filteredItems = result.items;
-
-        if (options.repo) {
-          const repoFilter = `github/${options.repo}`;
-          filteredItems = filteredItems.filter((session) =>
-            session.sourceContext.source.includes(repoFilter)
-          );
-        }
-
-        if (options.state && options.state.length > 0) {
-          const stateFilter = new Set(options.state);
-          filteredItems = filteredItems.filter((session) =>
-            session.state ? stateFilter.has(session.state) : false
-          );
-        }
+        const items = result.items;
 
         if (options.format === 'pretty') {
           console.log('Sessions:\n');
-          for (const session of filteredItems) {
+          for (const session of items) {
             output(session, 'pretty', 'session');
           }
-          console.log(`Total: ${filteredItems.length} sessions`);
+          console.log(`Total: ${items.length} sessions`);
           if (!shouldFetchAll && result.nextPageToken) {
             console.log(
               `\nNext page: jules-cli sessions list --page-token ${result.nextPageToken}`
@@ -216,7 +208,7 @@ export function createSessionsCommands(): Command {
         } else {
           output(
             {
-              sessions: filteredItems,
+              sessions: items,
               nextPageToken: result.nextPageToken,
               totalSize: result.totalSize,
             },

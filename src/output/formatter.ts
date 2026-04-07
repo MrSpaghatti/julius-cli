@@ -13,7 +13,33 @@ import {
   formatTableTemplates,
 } from './table.js';
 
-export function formatOutput(data: any, format: OutputFormat, type?: string): string {
+type Formatter = (data: any) => string;
+
+const prettyFormatters: Record<string, Formatter> = {
+  session: formatPrettySession,
+  source: formatPrettySource,
+  activity: formatPrettyActivity,
+  template: formatPrettyTemplate,
+};
+
+const tableFormatters: Record<string, Formatter> = {
+  session: (data) =>
+    formatTableSessions(Array.isArray(data) ? data : data.sessions || [data]),
+  source: (data) =>
+    formatTableSources(Array.isArray(data) ? data : data.sources || [data]),
+  activity: (data) =>
+    formatTableActivities(
+      Array.isArray(data) ? data : data.activities || [data]
+    ),
+  template: (data) =>
+    formatTableTemplates(Array.isArray(data) ? data : Object.values(data)),
+};
+
+export function formatOutput(
+  data: any,
+  format: OutputFormat,
+  type?: string
+): string {
   if (format === 'quiet') {
     return '';
   }
@@ -22,45 +48,17 @@ export function formatOutput(data: any, format: OutputFormat, type?: string): st
     return formatJSON(data);
   }
 
-  // Table format
-  if (format === 'table') {
-    if (type === 'session') {
-      const sessions = Array.isArray(data) ? data : (data.sessions || [data]);
-      return formatTableSessions(sessions);
+  if (type) {
+    if (format === 'table' && tableFormatters[type]) {
+      return tableFormatters[type](data);
     }
-    if (type === 'source') {
-      const sources = Array.isArray(data) ? data : (data.sources || [data]);
-      return formatTableSources(sources);
+
+    if (format === 'pretty' && prettyFormatters[type]) {
+      return prettyFormatters[type](data);
     }
-    if (type === 'activity') {
-      const activities = Array.isArray(data) ? data : (data.activities || [data]);
-      return formatTableActivities(activities);
-    }
-    if (type === 'template') {
-      const templates = Array.isArray(data) ? data : Object.values(data);
-      return formatTableTemplates(templates);
-    }
-    return formatJSON(data);
   }
 
-  // Pretty format
-  if (type === 'session') {
-    return formatPrettySession(data);
-  }
-
-  if (type === 'source') {
-    return formatPrettySource(data);
-  }
-
-  if (type === 'activity') {
-    return formatPrettyActivity(data);
-  }
-
-  if (type === 'template') {
-    return formatPrettyTemplate(data);
-  }
-
-  // Default to JSON if type not recognized
+  // Default to JSON if type/format not recognized
   return formatJSON(data);
 }
 

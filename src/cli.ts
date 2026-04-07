@@ -6,6 +6,8 @@ import { createActivitiesCommands } from './commands/activities.js';
 import { createWaitCommand } from './commands/wait-cli.js';
 import { createConfigCommands } from './commands/config.js';
 import { createTemplatesCommands } from './commands/templates.js';
+import { createInteractiveCommand } from './commands/interactive.js';
+import { createListenCommand } from './commands/listen.js';
 import { handleError } from './utils/errors.js';
 
 export const cli = new Command();
@@ -13,7 +15,7 @@ export const cli = new Command();
 cli
   .name('jules-cli')
   .description('AI-first CLI for Jules REST API with JSON output and full automation support')
-  .version('0.4.0');
+  .version('0.5.0'); // Bump version to 0.5.0
 
 // Global options
 cli.option('--verbose', 'Enable verbose logging');
@@ -27,6 +29,8 @@ cli.addCommand(createActivitiesCommands());
 cli.addCommand(createWaitCommand());
 cli.addCommand(createConfigCommands());
 cli.addCommand(createTemplatesCommands());
+cli.addCommand(createInteractiveCommand());
+cli.addCommand(createListenCommand());
 
 // Error handling
 cli.exitOverride();

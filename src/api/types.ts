@@ -68,6 +68,11 @@ export interface PaginatedResponse<T> {
   totalSize?: number;
 }
 
+export interface WebhookConfig {
+  url: string;
+  secret?: string;
+}
+
 // CLI Configuration
 export interface CLIConfig {
   apiKey?: string;
