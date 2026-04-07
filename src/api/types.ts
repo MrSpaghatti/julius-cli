@@ -78,8 +78,6 @@ export interface CLIConfig {
   apiKey?: string;
   apiEndpoint?: string; // Default: https://jules.googleapis.com/v1alpha
   authMethod?: 'apikey' | 'oauth';
-  googleClientId?: string;
-  googleClientSecret?: string;
   defaultFormat?: OutputFormat;
   defaultPageSize?: number; // Default: 30, max: 100
   pollInterval?: number; // Default: 5000ms

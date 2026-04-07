@@ -1,6 +1,6 @@
 # Testing Documentation
 
-This document tracks all testing performed on jules-cli-but-better.
+This document tracks all testing performed on julius-cli.
 
 ## Test Status: Phase 3 & 4 Automated Testing In Progress ⏳
 
@@ -243,7 +243,7 @@ npm test
 
 #### Test: Config file created
 ```bash
-ls -la ~/.config/jules-cli/
+ls -la ~/.config/julius-cli/
 ```
 **Result:** ✅ PASS
 - Config directory created
@@ -252,7 +252,7 @@ ls -la ~/.config/jules-cli/
 
 #### Test: Config file format
 ```bash
-cat ~/.config/jules-cli/config.json
+cat ~/.config/julius-cli/config.json
 ```
 **Result:** ✅ PASS
 - Valid JSON format

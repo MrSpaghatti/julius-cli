@@ -27,8 +27,8 @@ describe('Integration Flows', () => {
     keychain.clear();
     // We should also redirect 'conf' but for now we'll just mock the config methods if needed
     // or rely on the fact that we are mocking keychain.
-    jest.spyOn(config, 'getApiKey').mockImplementation(async () => keychain.get('jules-cli:api-key'));
-    jest.spyOn(config, 'setApiKey').mockImplementation(async (key) => { keychain.set('jules-cli:api-key', key); });
+    jest.spyOn(config, 'getApiKey').mockImplementation(async () => keychain.get('julius-cli:api-key'));
+    jest.spyOn(config, 'setApiKey').mockImplementation(async (key) => { keychain.set('julius-cli:api-key', key); });
   });
 
   it('should create a session and wait for it', async () => {
@@ -37,7 +37,7 @@ describe('Integration Flows', () => {
 
     // 1. Set API key
     await cli.parseAsync(['node', 'test', 'auth', 'set', apiKey]);
-    expect(keychain.get('jules-cli:api-key')).toBe(apiKey);
+    expect(keychain.get('julius-cli:api-key')).toBe(apiKey);
 
     // 2. Mock session creation
     server.use(

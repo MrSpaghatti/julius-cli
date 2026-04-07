@@ -62,7 +62,7 @@ class TemplatesManager {
 
   constructor() {
     this.conf = new Conf<TemplatesStore>({
-      projectName: 'jules-cli',
+      projectName: 'julius-cli',
       configName: 'templates',
       defaults: {
         templates: Object.fromEntries(DEFAULT_TEMPLATES.map((t) => [t.id, t])),

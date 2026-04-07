@@ -1,10 +1,10 @@
 {
-  "name": "jules-cli-but-better",
+  "name": "julius-cli",
   "version": "0.6.0",
   "description": "AI-first CLI for Jules REST API with JSON output and full automation support",
   "type": "module",
   "bin": {
-    "jules-cli": "./dist/index.js"
+    "julius-cli": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc --noEmit && tsup",

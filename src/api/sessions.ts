@@ -51,12 +51,11 @@ export class SessionsAPI {
     if (!response || typeof response !== 'object') {
       throw new Error('Invalid response structure from API');
     }
-    if (!Array.isArray(response.sessions)) {
-      throw new Error('Expected sessions array in API response');
-    }
+
+    const sessions = response.sessions || [];
 
     return {
-      items: response.sessions,
+      items: sessions,
       nextPageToken: response.nextPageToken,
       totalSize: response.totalSize,
     };

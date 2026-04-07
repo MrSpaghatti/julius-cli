@@ -155,7 +155,18 @@ export function createSessionsCommands(): Command {
 
         const filters: string[] = [];
         if (options.repo) {
-          filters.push(`source = "sources/github/${options.repo}"`);
+          if (options.repo.includes('/')) {
+            const parts = options.repo.split('/');
+            if (parts.length === 3) {
+              // provider/owner/repo
+              filters.push(`source = "sources/${options.repo}"`);
+            } else if (parts.length === 2) {
+              // owner/repo (default to github for backward compatibility or infer)
+              filters.push(`source = "sources/github/${options.repo}"`);
+            }
+          } else {
+             filters.push(`source = "sources/${options.repo}"`);
+          }
         }
         if (options.state && options.state.length > 0) {
           const stateFilters = options.state
@@ -166,8 +177,7 @@ export function createSessionsCommands(): Command {
         const filter = filters.length > 0 ? filters.join(' AND ') : undefined;
 
         let result;
-        const hasFilters = filters.length > 0;
-        const shouldFetchAll = options.all || hasFilters;
+        const shouldFetchAll = !!options.all;
 
         let spinner;
         if (options.format === 'pretty' && shouldFetchAll) {
@@ -197,7 +207,7 @@ export function createSessionsCommands(): Command {
           console.log(`Total: ${items.length} sessions`);
           if (!shouldFetchAll && result.nextPageToken) {
             console.log(
-              `\nNext page: jules-cli sessions list --page-token ${result.nextPageToken}`
+              `\nNext page: julius-cli sessions list --page-token ${result.nextPageToken}`
             );
           }
         } else {

@@ -33,12 +33,11 @@ export class ActivitiesAPI {
     if (!response || typeof response !== 'object') {
       throw new Error('Invalid response structure from API');
     }
-    if (!Array.isArray(response.activities)) {
-      throw new Error('Expected activities array in API response');
-    }
+
+    const activities = response.activities || [];
 
     return {
-      items: response.activities,
+      items: activities,
       nextPageToken: response.nextPageToken,
       totalSize: response.totalSize,
     };

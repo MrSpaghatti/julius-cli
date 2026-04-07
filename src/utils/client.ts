@@ -31,15 +31,16 @@ export async function getClient(): Promise<JulesAPIClient> {
   const oauthTokens = await config.getOAuthTokens();
   if (oauthTokens && config.getAuthMethod() === 'oauth') {
     const provider = new OAuthProvider(oauthTokens, async () => {
+      const stored = await config.getOAuthClientCredentials();
       const clientId =
-        process.env.JULES_GOOGLE_CLIENT_ID || (config.get('googleClientId') as string);
+        process.env.JULES_GOOGLE_CLIENT_ID || stored.clientId;
       const clientSecret =
-        process.env.JULES_GOOGLE_CLIENT_SECRET || (config.get('googleClientSecret') as string);
+        process.env.JULES_GOOGLE_CLIENT_SECRET || stored.clientSecret;
 
       if (!clientId || !clientSecret) {
         throw new AuthError(
           'OAuth client ID and secret are required for token refresh.',
-          'Set them via JULES_GOOGLE_CLIENT_ID and JULES_GOOGLE_CLIENT_SECRET environment variables.'
+          'Set them via JULES_GOOGLE_CLIENT_ID and JULES_GOOGLE_CLIENT_SECRET environment variables or run "julius-cli auth login".'
         );
       }
 
@@ -59,6 +60,6 @@ export async function getClient(): Promise<JulesAPIClient> {
 
   throw new AuthError(
     'No credentials found.',
-    'Run "jules-cli auth login" or "jules-cli auth set <key>" to configure.'
+    'Run "julius-cli auth login" or "julius-cli auth set <key>" to configure.'
   );
 }

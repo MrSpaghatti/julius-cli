@@ -13,7 +13,13 @@ import {
   formatTableTemplates,
 } from './table.js';
 
-type Formatter = (data: any) => string;
+let headerShown = false;
+
+export function resetHeader(): void {
+  headerShown = false;
+}
+
+type Formatter = (data: any, includeHeader?: boolean) => string;
 
 const prettyFormatters: Record<string, Formatter> = {
   session: formatPrettySession,
@@ -23,22 +29,24 @@ const prettyFormatters: Record<string, Formatter> = {
 };
 
 const tableFormatters: Record<string, Formatter> = {
-  session: (data) =>
+  session: (data, h) =>
     formatTableSessions(Array.isArray(data) ? data : data.sessions || [data]),
-  source: (data) =>
+  source: (data, h) =>
     formatTableSources(Array.isArray(data) ? data : data.sources || [data]),
-  activity: (data) =>
+  activity: (data, h) =>
     formatTableActivities(
-      Array.isArray(data) ? data : data.activities || [data]
+      Array.isArray(data) ? data : data.activities || [data],
+      h
     ),
-  template: (data) =>
+  template: (data, h) =>
     formatTableTemplates(Array.isArray(data) ? data : Object.values(data)),
 };
 
 export function formatOutput(
   data: any,
   format: OutputFormat,
-  type?: string
+  type?: string,
+  isStream: boolean = false
 ): string {
   if (format === 'quiet') {
     return '';
@@ -50,7 +58,9 @@ export function formatOutput(
 
   if (type) {
     if (format === 'table' && tableFormatters[type]) {
-      return tableFormatters[type](data);
+      const includeHeader = !isStream || !headerShown;
+      if (isStream) headerShown = true;
+      return tableFormatters[type](data, includeHeader);
     }
 
     if (format === 'pretty' && prettyFormatters[type]) {
@@ -62,8 +72,8 @@ export function formatOutput(
   return formatJSON(data);
 }
 
-export function output(data: any, format: OutputFormat = 'json', type?: string): void {
-  const formatted = formatOutput(data, format, type);
+export function output(data: any, format: OutputFormat = 'json', type?: string, isStream: boolean = false): void {
+  const formatted = formatOutput(data, format, type, isStream);
   if (formatted) {
     console.log(formatted);
   }

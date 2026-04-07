@@ -9,7 +9,7 @@ export class JulesAPIClient {
 
   constructor(
     private tokenProvider: TokenProvider,
-    baseURL: string = process.env.JULES_API_URL || 'https://jules.googleapis.com/v1alpha'
+    baseURL: string = process.env.JULES_API_URL || process.env.JULES_API_ENDPOINT || 'https://jules.googleapis.com/v1alpha'
   ) {
     this.baseURL = baseURL;
     this.axios = axios.create({
@@ -76,7 +76,7 @@ export class JulesAPIClient {
     // Authentication errors
     if (status === 401 || status === 403) {
       throw new AuthError(
-        'Invalid or missing credentials. Run "jules-cli auth login" or "jules-cli auth set <key>" to configure.'
+        'Invalid or missing credentials. Run "julius-cli auth login" or "julius-cli auth set <key>" to configure.'
       );
     }
 

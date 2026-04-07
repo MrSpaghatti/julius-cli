@@ -13,9 +13,9 @@ import { handleError } from './utils/errors.js';
 export const cli = new Command();
 
 cli
-  .name('jules-cli')
+  .name('julius-cli')
   .description('AI-first CLI for Jules REST API with JSON output and full automation support')
-  .version('0.5.0'); // Bump version to 0.5.0
+  .version('0.6.0');
 
 // Global options
 cli.option('--verbose', 'Enable verbose logging');

@@ -1,6 +1,6 @@
 # AI Agent Workflow Examples
 
-This document provides practical examples for AI agents (Claude, Copilot, Gemini, etc.) using jules-cli-but-better.
+This document provides practical examples for AI agents (Claude, Copilot, Gemini, etc.) using julius-cli.
 
 ---
 
@@ -8,12 +8,12 @@ This document provides practical examples for AI agents (Claude, Copilot, Gemini
 
 ```bash
 # Install the CLI
-npm install -g jules-cli-but-better
+npm install -g julius-cli
 
 # Set your API key (one time setup)
 export JULES_API_KEY="your-api-key-here"
 # OR
-jules-cli auth set "your-api-key-here"
+julius-cli auth set "your-api-key-here"
 ```
 
 ---
@@ -27,7 +27,7 @@ jules-cli auth set "your-api-key-here"
 set -e
 
 # Create a new session
-RESPONSE=$(jules-cli sessions create \
+RESPONSE=$(julius-cli sessions create \
   --repo "myorg/myrepo" \
   --prompt "Fix the authentication bug in src/auth.ts" \
   --title "Auth Bug Fix" \
@@ -40,7 +40,7 @@ echo "Created session: $SESSION_ID"
 
 # Poll until session completes
 while true; do
-  STATE=$(jules-cli sessions get "$SESSION_ID" --format json | jq -r '.state')
+  STATE=$(julius-cli sessions get "$SESSION_ID" --format json | jq -r '.state')
   echo "Current state: $STATE"
   
   if [ "$STATE" = "COMPLETED" ]; then
@@ -55,7 +55,7 @@ while true; do
 done
 
 # Get the PR URL from outputs
-PR_URL=$(jules-cli sessions get "$SESSION_ID" --format json | \
+PR_URL=$(julius-cli sessions get "$SESSION_ID" --format json | \
   jq -r '.outputs[0].pullRequest.url // empty')
 
 if [ -n "$PR_URL" ]; then
@@ -72,7 +72,7 @@ fi
 set -e
 
 # Create session requiring plan approval
-SESSION_ID=$(jules-cli sessions create \
+SESSION_ID=$(julius-cli sessions create \
   --repo "myorg/myrepo" \
   --prompt "Refactor database connection pooling" \
   --require-approval \
@@ -82,7 +82,7 @@ echo "Session created: $SESSION_ID"
 
 # Wait for plan
 while true; do
-  STATE=$(jules-cli sessions get "$SESSION_ID" --format json | jq -r '.state')
+  STATE=$(julius-cli sessions get "$SESSION_ID" --format json | jq -r '.state')
   
   if [ "$STATE" = "AWAITING_APPROVAL" ]; then
     echo "Plan is ready for approval"
@@ -94,17 +94,17 @@ done
 
 # View the plan
 echo "=== PLAN ==="
-jules-cli activities list "$SESSION_ID" \
+julius-cli activities list "$SESSION_ID" \
   --type PLAN \
   --format pretty
 
 # Approve the plan
-jules-cli sessions approve "$SESSION_ID"
+julius-cli sessions approve "$SESSION_ID"
 echo "Plan approved"
 
 # Monitor execution
 while true; do
-  STATE=$(jules-cli sessions get "$SESSION_ID" --format json | jq -r '.state')
+  STATE=$(julius-cli sessions get "$SESSION_ID" --format json | jq -r '.state')
   echo "Current state: $STATE"
   
   if [ "$STATE" = "COMPLETED" ] || [ "$STATE" = "FAILED" ]; then
@@ -123,12 +123,12 @@ done
 #!/bin/bash
 
 # List all active sessions
-jules-cli sessions list \
+julius-cli sessions list \
   --state PENDING PLANNING EXECUTING \
   --format pretty
 
 # List sessions for specific repo
-jules-cli sessions list \
+julius-cli sessions list \
   --repo "myorg/myrepo" \
   --format json
 
@@ -136,7 +136,7 @@ jules-cli sessions list \
 SESSION_IDS=("session1" "session2" "session3")
 for sid in "${SESSION_IDS[@]}"; do
   echo "=== Session: $sid ==="
-  jules-cli sessions get "$sid" --format pretty
+  julius-cli sessions get "$sid" --format pretty
 done
 ```
 
@@ -160,7 +160,7 @@ LAST_COUNT=0
 
 while true; do
   # Get all activities
-  ACTIVITIES=$(jules-cli activities list "$SESSION_ID" --format json)
+  ACTIVITIES=$(julius-cli activities list "$SESSION_ID" --format json)
   CURRENT_COUNT=$(echo "$ACTIVITIES" | jq '.activities | length')
   
   # If new activities, show them
@@ -171,7 +171,7 @@ while true; do
   fi
   
   # Check if session is done
-  STATE=$(jules-cli sessions get "$SESSION_ID" --format json | jq -r '.state')
+  STATE=$(julius-cli sessions get "$SESSION_ID" --format json | jq -r '.state')
   if [ "$STATE" = "COMPLETED" ] || [ "$STATE" = "FAILED" ] || [ "$STATE" = "CANCELLED" ]; then
     echo "Session ended with state: $STATE"
     break
@@ -192,7 +192,7 @@ set -e
 SESSION_ID="$1"
 
 # Send initial message
-jules-cli sessions send "$SESSION_ID" \
+julius-cli sessions send "$SESSION_ID" \
   --message "Please also add unit tests for the changes" \
   --format json
 
@@ -200,12 +200,12 @@ jules-cli sessions send "$SESSION_ID" \
 sleep 5
 
 # Check for new activities
-jules-cli activities list "$SESSION_ID" \
+julius-cli activities list "$SESSION_ID" \
   --type MESSAGE \
   --format pretty
 
 # Send another follow-up
-jules-cli sessions send "$SESSION_ID" \
+julius-cli sessions send "$SESSION_ID" \
   --message "Make sure to update the documentation too" \
   --format json
 ```
@@ -223,7 +223,7 @@ jules-cli sessions send "$SESSION_ID" \
 while IFS='|' read -r repo prompt title; do
   echo "Creating session for: $title"
   
-  SESSION_ID=$(jules-cli sessions create \
+  SESSION_ID=$(julius-cli sessions create \
     --repo "$repo" \
     --prompt "$prompt" \
     --title "$title" \
@@ -251,7 +251,7 @@ import subprocess
 import time
 
 def run_jules_cli(command):
-    """Run jules-cli command and return parsed JSON"""
+    """Run julius-cli command and return parsed JSON"""
     result = subprocess.run(
         command,
         shell=True,
@@ -266,7 +266,7 @@ def run_jules_cli(command):
 
 def create_session(repo, prompt, **kwargs):
     """Create a Jules session"""
-    cmd = f'jules-cli sessions create --repo "{repo}" --prompt "{prompt}" --format json'
+    cmd = f'julius-cli sessions create --repo "{repo}" --prompt "{prompt}" --format json'
     
     if kwargs.get('title'):
         cmd += f' --title "{kwargs["title"]}"'
@@ -285,7 +285,7 @@ def wait_for_session(session_id, timeout=600):
         if time.time() - start_time > timeout:
             raise TimeoutError(f"Session {session_id} timed out")
         
-        session = run_jules_cli(f'jules-cli sessions get {session_id} --format json')
+        session = run_jules_cli(f'julius-cli sessions get {session_id} --format json')
         state = session['state']
         
         print(f"Session {session_id}: {state}")
@@ -335,7 +335,7 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 
 async function julesCommand(cmd) {
-  const { stdout, stderr } = await execAsync(`jules-cli ${cmd} --format json`);
+  const { stdout, stderr } = await execAsync(`julius-cli ${cmd} --format json`);
   if (stderr) console.error(stderr);
   return JSON.parse(stdout);
 }
@@ -446,7 +446,7 @@ check_jules_command() {
 }
 
 # Use the function
-SESSION_DATA=$(check_jules_command "jules-cli sessions get $SESSION_ID --format json")
+SESSION_DATA=$(check_jules_command "julius-cli sessions get $SESSION_ID --format json")
 echo "Session retrieved successfully"
 ```
 
@@ -468,15 +468,15 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Setup jules-cli
+      - name: Setup julius-cli
         run: |
-          npm install -g jules-cli-but-better
+          npm install -g julius-cli
           echo "JULES_API_KEY=${{ secrets.JULES_API_KEY }}" >> $GITHUB_ENV
       
       - name: Create Jules session
         id: create_session
         run: |
-          SESSION=$(jules-cli sessions create \
+          SESSION=$(julius-cli sessions create \
             --repo "${{ github.repository }}" \
             --prompt "Fix issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" \
             --title "Auto-fix #${{ github.event.issue.number }}" \
@@ -491,7 +491,7 @@ jobs:
           SESSION_ID="${{ steps.create_session.outputs.session_id }}"
           
           for i in {1..60}; do
-            STATE=$(jules-cli sessions get "$SESSION_ID" --format json | jq -r '.state')
+            STATE=$(julius-cli sessions get "$SESSION_ID" --format json | jq -r '.state')
             echo "Attempt $i: $STATE"
             
             if [ "$STATE" = "COMPLETED" ]; then
@@ -543,14 +543,14 @@ jobs:
 
 ### Pattern: Create and forget
 ```bash
-jules-cli sessions create --repo X --prompt Y --auto-pr --format quiet
+julius-cli sessions create --repo X --prompt Y --auto-pr --format quiet
 # Exit code 0 = success, non-zero = failure
 ```
 
 ### Pattern: Create and wait
 ```bash
-SESSION_ID=$(jules-cli sessions create ... | jq -r '.id')
-while [ "$(jules-cli sessions get $SESSION_ID | jq -r '.state')" = "EXECUTING" ]; do
+SESSION_ID=$(julius-cli sessions create ... | jq -r '.id')
+while [ "$(julius-cli sessions get $SESSION_ID | jq -r '.state')" = "EXECUTING" ]; do
   sleep 5
 done
 ```
@@ -558,10 +558,10 @@ done
 ### Pattern: Check before creating
 ```bash
 # Check if API key is valid
-jules-cli auth status --format json | jq -e '.valid' || exit 2
+julius-cli auth status --format json | jq -e '.valid' || exit 2
 
 # Check if repo exists
-jules-cli sources get "github/$REPO" --format quiet || exit 4
+julius-cli sources get "github/$REPO" --format quiet || exit 4
 ```
 
 ---

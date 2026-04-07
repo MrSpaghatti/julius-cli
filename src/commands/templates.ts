@@ -3,7 +3,12 @@ import chalk from 'chalk';
 import { templates } from '../config/templates.js';
 import { formatOutput } from '../output/formatter.js';
 import { handleCreateSession } from './sessions.js';
+import { NotFoundError, InvalidArgsError } from '../utils/errors.js';
 import type { Template } from '../api/types.js';
+
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 export function createTemplatesCommands(): Command {
   const templatesCmd = new Command('templates')
@@ -25,8 +30,7 @@ export function createTemplatesCommands(): Command {
     .action(async (id, options) => {
       const template = templates.get(id);
       if (!template) {
-        console.error(chalk.red(`Template with ID "${id}" not found.`));
-        process.exit(1);
+        throw new NotFoundError('Template', id);
       }
       console.log(formatOutput(template, options.format, 'template'));
     });
@@ -45,8 +49,7 @@ export function createTemplatesCommands(): Command {
     .action(async (id, vars, options) => {
       const template = templates.get(id);
       if (!template) {
-        console.error(chalk.red(`Template with ID "${id}" not found.`));
-        process.exit(1);
+        throw new NotFoundError('Template', id);
       }
 
       // Parse variables
@@ -63,11 +66,11 @@ export function createTemplatesCommands(): Command {
       template.variables?.forEach((variable) => {
         const value = variableValues[variable.name] || variable.defaultValue;
         if (variable.required && !value) {
-          console.error(chalk.red(`Variable "${variable.name}" is required for template "${id}".`));
-          process.exit(1);
+          throw new InvalidArgsError(`Variable "${variable.name}" is required for template "${id}".`);
         }
         if (value) {
-          prompt = prompt.replace(new RegExp(`{{${variable.name}}}`, 'g'), value);
+          const escapedName = escapeRegExp(variable.name);
+          prompt = prompt.replace(new RegExp(`{{${escapedName}}}`, 'g'), value);
         }
       });
 

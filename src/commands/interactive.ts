@@ -31,7 +31,7 @@ export function createInteractiveCommand(): Command {
       const rl = readline.createInterface({ input, output });
 
       while (true) {
-        const prompt = currentRepo ? `jules-cli [${currentRepo}] > ` : 'jules-cli > ';
+        const prompt = currentRepo ? `julius-cli [${currentRepo}] > ` : 'julius-cli > ';
         const line = await rl.question(chalk.green.bold(prompt));
         const trimmed = line.trim();
 

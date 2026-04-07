@@ -1,7 +1,7 @@
 # Implementation Log
 
 ## Overview
-This document tracks the implementation of jules-cli-but-better, an AI-first CLI tool for the Jules REST API.
+This document tracks the implementation of julius-cli, an AI-first CLI tool for the Jules REST API.
 
 **Started:** 2026-04-06  
 **Current Status:** Phase 1-6 Complete (v0.5.0)  
@@ -35,7 +35,7 @@ This document tracks the implementation of jules-cli-but-better, an AI-first CLI
 
 #### 4. Configuration System ✅
 - **File:** `src/config/index.ts`
-- Uses `conf` for local storage in `~/.config/jules-cli/config.json`.
+- Uses `conf` for local storage in `~/.config/julius-cli/config.json`.
 
 #### 5. API Client ✅
 - **File:** `src/api/client.ts`
@@ -102,7 +102,7 @@ This document tracks the implementation of jules-cli-but-better, an AI-first CLI
 #### 1. Interactive Mode (REPL) ✅
 - **File:** `src/commands/interactive.ts`
 - Persistent shell session with repository context persistence.
-- Supports any `jules-cli` command within the REPL.
+- Supports any `julius-cli` command within the REPL.
 
 #### 2. Webhook Support ✅
 - **File:** `src/commands/listen.ts`

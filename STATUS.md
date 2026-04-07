@@ -1,6 +1,6 @@
 # Project Status Report
 
-**Project:** jules-cli-but-better  
+**Project:** julius-cli  
 **Date:** 2026-04-06  
 **Status:** Phase 6 Complete  
 **Version:** 0.5.0
@@ -31,8 +31,8 @@ Version 0.5.0 introduces Phase 6 features: Advanced Automation and Interactivity
 ### Source Code ✅
 
 **New Features:**
-- `jules-cli interactive` (REPL) for persistent command sessions.
-- `jules-cli listen` for local webhook monitoring.
+- `julius-cli interactive` (REPL) for persistent command sessions.
+- `julius-cli listen` for local webhook monitoring.
 - Server-side filtering in `SessionsAPI` and `ActivitiesAPI`.
 - Support for `registerWebhook` in `SessionsAPI`.
 
@@ -47,7 +47,7 @@ Version 0.5.0 introduces Phase 6 features: Advanced Automation and Interactivity
 ### Interactive Mode (REPL) ✅
 - **Context Persistence:** Maintain default repository context across commands.
 - **On-the-fly Configuration:** Change repository with `repo <owner/repo>`.
-- **Seamless Integration:** Run any `jules-cli` command within the REPL.
+- **Seamless Integration:** Run any `julius-cli` command within the REPL.
 
 ### Webhook Support ✅
 - **Local Listener:** `listen` command starts an HTTP server for updates.

@@ -52,8 +52,7 @@ export function createActivitiesCommands(): Command {
       const filter = filters.length > 0 ? filters.join(' AND ') : undefined;
 
       let result;
-      const hasFilters = filters.length > 0;
-      const shouldFetchAll = options.all || hasFilters;
+      const shouldFetchAll = !!options.all;
 
       if (shouldFetchAll) {
         result = await fetchAllPages(
@@ -74,7 +73,7 @@ export function createActivitiesCommands(): Command {
         console.log(`Total: ${items.length} activities`);
         if (!shouldFetchAll && result.nextPageToken) {
           console.log(
-            `\nNext page: jules-cli activities list ${sessionId} --page-token ${result.nextPageToken}`
+            `\nNext page: julius-cli activities list ${sessionId} --page-token ${result.nextPageToken}`
           );
         }
       } else {

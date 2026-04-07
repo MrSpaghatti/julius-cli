@@ -42,8 +42,8 @@ export function formatTableSources(sources: Source[]): string {
   return table.toString();
 }
 
-export function formatTableActivities(activities: Activity[]): string {
-  const table = createTable(['ID', 'Type', 'Author', 'Content', 'Created']);
+export function formatTableActivities(activities: Activity[], includeHeader: boolean = true): string {
+  const table = createTable(includeHeader ? ['ID', 'Type', 'Author', 'Content', 'Created'] : []);
 
   for (const activity of activities) {
     const created = new Date(activity.createTime).toLocaleString();

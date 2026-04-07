@@ -67,7 +67,8 @@ export function createListenCommand(): Command {
             return;
           }
 
-          let body = '';
+          const chunks: Buffer[] = [];
+          let currentSize = 0;
 
           // Validate Content-Length header if present
           const contentLength = parseInt(req.headers['content-length'] || '0', 10);
@@ -77,19 +78,25 @@ export function createListenCommand(): Command {
             return;
           }
 
-          req.on('data', (chunk) => {
-            body += chunk.toString();
-            // Kill connection if payload exceeds limit
-            if (body.length > MAX_BODY_SIZE) {
+          req.on('data', (chunk: Buffer) => {
+            currentSize += chunk.length;
+            if (currentSize > MAX_BODY_SIZE) {
               req.destroy();
-              res.writeHead(413, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Payload too large' }));
+              if (!res.headersSent) {
+                res.writeHead(413, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Payload too large' }));
+              }
+              return;
             }
+            chunks.push(chunk);
           });
 
           req.on('end', () => {
             // Skip if connection was destroyed
             if (!res.headersSent) {
+              const bodyBuffer = Buffer.concat(chunks);
+              const body = bodyBuffer.toString('utf-8');
+
               // Verify HMAC signature if secret is configured
               if (secret) {
                 const signature = req.headers['x-julius-signature'] as string | undefined;
@@ -101,6 +108,9 @@ export function createListenCommand(): Command {
               }
 
               try {
+                if (body.length === 0) {
+                   throw new Error('Empty body');
+                }
                 const data = JSON.parse(body);
                 console.log(chalk.blue(`\n[${new Date().toLocaleTimeString()}] Webhook received:`));
 

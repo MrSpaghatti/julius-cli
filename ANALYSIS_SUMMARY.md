@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-06  
 **Analyst:** GitHub Copilot CLI & Gemini  
-**Project:** jules-cli-but-better v0.4.0
+**Project:** julius-cli v0.4.0
 
 ## Executive Summary
 

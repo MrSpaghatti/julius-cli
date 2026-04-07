@@ -57,7 +57,7 @@ export function createSourcesCommands(): Command {
           console.log(`Total: ${result.totalSize} repositories`);
         }
         if (!options.all && result.nextPageToken) {
-          console.log(`\nNext page: jules-cli sources list --page-token ${result.nextPageToken}`);
+          console.log(`\nNext page: julius-cli sources list --page-token ${result.nextPageToken}`);
         }
       } else {
         output(

@@ -42,6 +42,20 @@ export async function runBrowserOAuthFlow(
   return new Promise((resolve, reject) => {
     const server = http.createServer();
     
+    // Safety: 5 minute timeout
+    const timeout = setTimeout(() => {
+      server.close();
+      reject(new Error('Authentication timed out after 5 minutes'));
+    }, 5 * 60 * 1000);
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      process.removeListener('SIGINT', cleanup);
+      server.close();
+    };
+
+    process.on('SIGINT', cleanup);
+
     server.on('request', async (req, res) => {
       try {
         const url = new URL(req.url!, `http://${req.headers.host}`);
@@ -56,7 +70,10 @@ export async function runBrowserOAuthFlow(
           throw new Error('No code returned');
         }
 
-        const address = server.address() as any;
+        const address = server.address();
+        if (!address || typeof address === 'string') {
+          throw new Error('Could not determine local server address');
+        }
         const redirectUri = `http://127.0.0.1:${address.port}`;
         const oauth2Client = new OAuth2Client(clientId, clientSecret, redirectUri);
         
@@ -67,7 +84,7 @@ export async function runBrowserOAuthFlow(
 
         res.writeHead(200, { 'Content-Type': 'text/html' });
         res.end('<h1>Authentication successful!</h1><p>You can close this window now.</p>');
-        server.close();
+        cleanup();
 
         resolve({
           accessToken: tokens.access_token!,
@@ -77,13 +94,17 @@ export async function runBrowserOAuthFlow(
       } catch (err) {
         res.writeHead(500, { 'Content-Type': 'text/html' });
         res.end(`<h1>Authentication failed</h1><p>${(err as Error).message}</p>`);
-        server.close();
+        cleanup();
         reject(err);
       }
     });
 
     server.listen(0, '127.0.0.1', () => {
-      const address = server.address() as any;
+      const address = server.address();
+      if (!address || typeof address === 'string') {
+        reject(new Error('Could not determine local server address'));
+        return;
+      }
       const port = address.port;
       const redirectUri = `http://127.0.0.1:${port}`;
 
@@ -93,7 +114,7 @@ export async function runBrowserOAuthFlow(
         scope: scopes,
         state,
         code_challenge: challenge,
-        code_challenge_method: 'S256' as any,
+        code_challenge_method: 'S256',
       });
 
       console.log('Opening browser for authentication...');

@@ -1,6 +1,6 @@
-# Paper Trail - jules-cli-but-better Implementation
+# Paper Trail - julius-cli Implementation
 
-**Project:** jules-cli-but-better  
+**Project:** julius-cli  
 **Implementation Date:** 2026-04-06  
 **Implementer:** GitHub Copilot CLI  
 **Status:** Phase 1-6 Complete
@@ -9,7 +9,7 @@
 
 ## Summary of Work Completed
 
-This document serves as a comprehensive paper trail of all work performed during the implementation of jules-cli-but-better, an AI-first CLI tool for the Jules REST API.
+This document serves as a comprehensive paper trail of all work performed during the implementation of julius-cli, an AI-first CLI tool for the Jules REST API.
 
 ### Implementation Timeline
 

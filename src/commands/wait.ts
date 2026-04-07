@@ -54,6 +54,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
   const seenActivityIds = new Set<string>();
   let consecutiveErrors = 0;
   const MAX_CONSECUTIVE_ERRORS = 10;
+  let isFirstPass = true;
 
   while (true) {
     attempts++;
@@ -84,21 +85,33 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
       if (follow) {
         try {
           let newActivities: Activity[] = [];
+          let pollToken = currentToken;
 
           while (true) {
-            const result = await activitiesAPI.list(sessionId, 100, currentToken);
+            const result = await activitiesAPI.list(sessionId, 100, pollToken);
 
             for (const act of result.items) {
               if (!seenActivityIds.has(act.id)) {
-                newActivities.push(act);
+                if (!isFirstPass) {
+                  newActivities.push(act);
+                }
                 seenActivityIds.add(act.id);
               }
             }
 
             if (!result.nextPageToken) {
+              // Store the last valid page token if the API supports resuming from it,
+              // or keep it undefined to start from beginning if that's how it works.
+              // Most APIs return undefined for the last page.
               break;
             }
-            currentToken = result.nextPageToken;
+            pollToken = result.nextPageToken;
+            currentToken = pollToken; // Persist for next loop
+          }
+
+          if (isFirstPass) {
+            if (verbose) console.error(`[wait] Initialized with ${seenActivityIds.size} existing activities.`);
+            isFirstPass = false;
           }
 
           // Filter by activity type if provided
@@ -111,7 +124,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
           newActivities.sort((a, b) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime());
 
           for (const activity of newActivities) {
-            output(activity, format, 'activity');
+            output(activity, format, 'activity', true);
           }
         } catch (actError) {
           if (verbose) {

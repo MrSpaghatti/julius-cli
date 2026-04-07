@@ -192,7 +192,7 @@ export async function getClient(): Promise<JulesAPIClient> {
   if (apiKey) {
     return new JulesAPIClient(new ApiKeyProvider(apiKey), config.getApiEndpoint());
   }
-  throw new AuthError('No credentials found.', 'Run: jules-cli auth login  OR  jules-cli auth set <api-key>');
+  throw new AuthError('No credentials found.', 'Run: julius-cli auth login  OR  julius-cli auth set <api-key>');
 }
 ```
 
@@ -204,7 +204,7 @@ Add subcommands:
 
 **`auth login`**
 ```bash
-jules-cli auth login [--client-id <id>] [--client-secret <secret>] [--device-code]
+julius-cli auth login [--client-id <id>] [--client-secret <secret>] [--device-code]
 ```
 - Default: browser PKCE flow
 - `--device-code`: device code flow
@@ -214,7 +214,7 @@ jules-cli auth login [--client-id <id>] [--client-secret <secret>] [--device-cod
 
 **`auth logout`** (alias for `auth clear`)
 ```bash
-jules-cli auth logout
+julius-cli auth logout
 ```
 - Calls `config.clearApiKey()` + `config.clearOAuthTokens()` + `config.setAuthMethod('apikey')`
 

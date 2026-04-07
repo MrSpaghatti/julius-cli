@@ -15,7 +15,9 @@ export async function fetchAllPages<T>(
 
   do {
     const response = await listFn(nextPageToken, pageSize);
-    allItems.push(...response.items);
+    for (const item of response.items) {
+      allItems.push(item);
+    }
     nextPageToken = response.nextPageToken;
     totalSize = response.totalSize;
   } while (nextPageToken);

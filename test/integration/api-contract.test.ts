@@ -29,13 +29,13 @@ jest.unstable_mockModule('cross-keychain', () => ({
 describe('API Contract Validation', () => {
   beforeEach(() => {
     keychain.clear();
-    jest.spyOn(config, 'getApiKey').mockImplementation(async () => keychain.get('jules-cli:api-key'));
+    jest.spyOn(config, 'getApiKey').mockImplementation(async () => keychain.get('julius-cli:api-key'));
   });
 
   describe('Sessions API - Invalid Response Structure', () => {
     it('should throw when response is missing sessions array', async () => {
       const apiKey = 'test-api-key';
-      keychain.set('jules-cli:api-key', apiKey);
+      keychain.set('julius-cli:api-key', apiKey);
 
       server.use(
         http.get(`${baseURL}/sessions`, () => HttpResponse.json({ wrong: 'shape' }))

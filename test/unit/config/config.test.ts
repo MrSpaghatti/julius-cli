@@ -99,12 +99,12 @@ describe('ConfigManager', () => {
 
     it('should set API key in keychain', async () => {
       await config.setApiKey('new-key');
-      expect(setPassword).toHaveBeenCalledWith('jules-cli', 'api-key', 'new-key');
+      expect(setPassword).toHaveBeenCalledWith('julius-cli', 'api-key', 'new-key');
     });
 
     it('should clear API key from keychain', async () => {
       await config.clearApiKey();
-      expect(deletePassword).toHaveBeenCalledWith('jules-cli', 'api-key');
+      expect(deletePassword).toHaveBeenCalledWith('julius-cli', 'api-key');
     });
 
     it('should get API key source as environment', async () => {

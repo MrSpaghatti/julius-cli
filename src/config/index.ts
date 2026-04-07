@@ -4,9 +4,11 @@ import type { CLIConfig } from '../api/types.js';
 import { CLIError, ExitCode } from '../utils/errors.js';
 import { OAuthTokens } from '../utils/oauth.js';
 
-const SERVICE_NAME = 'jules-cli';
+const SERVICE_NAME = 'julius-cli';
 const ACCOUNT_NAME = 'api-key';
 const ACCOUNT_NAME_OAUTH = 'oauth-tokens';
+const ACCOUNT_NAME_OAUTH_CLIENT_ID = 'oauth-client-id';
+const ACCOUNT_NAME_OAUTH_CLIENT_SECRET = 'oauth-client-secret';
 
 const schema = {
   apiEndpoint: {
@@ -17,12 +19,6 @@ const schema = {
     type: 'string',
     enum: ['apikey', 'oauth'],
     default: 'apikey',
-  },
-  googleClientId: {
-    type: 'string',
-  },
-  googleClientSecret: {
-    type: 'string',
   },
   defaultFormat: {
     type: 'string',
@@ -52,7 +48,7 @@ class ConfigManager {
 
   constructor() {
     this.conf = new Conf<CLIConfig>({
-      projectName: 'jules-cli',
+      projectName: 'julius-cli',
       schema: schema as any,
     });
   }
@@ -100,6 +96,15 @@ class ConfigManager {
     }
   }
 
+  async clearOAuthClientCredentials(): Promise<void> {
+    try {
+      await deletePassword(SERVICE_NAME, ACCOUNT_NAME_OAUTH_CLIENT_ID);
+      await deletePassword(SERVICE_NAME, ACCOUNT_NAME_OAUTH_CLIENT_SECRET);
+    } catch (error) {
+      // Ignore
+    }
+  }
+
   has(key: keyof CLIConfig): boolean {
     return this.conf.has(key);
   }
@@ -142,6 +147,24 @@ class ConfigManager {
     await setPassword(SERVICE_NAME, ACCOUNT_NAME_OAUTH, JSON.stringify(tokens));
   }
 
+  async getOAuthClientCredentials(): Promise<{ clientId?: string; clientSecret?: string }> {
+    try {
+      const clientId = await getPassword(SERVICE_NAME, ACCOUNT_NAME_OAUTH_CLIENT_ID);
+      const clientSecret = await getPassword(SERVICE_NAME, ACCOUNT_NAME_OAUTH_CLIENT_SECRET);
+      return {
+        clientId: clientId || undefined,
+        clientSecret: clientSecret || undefined,
+      };
+    } catch (error) {
+      return {};
+    }
+  }
+
+  async setOAuthClientCredentials(clientId: string, clientSecret: string): Promise<void> {
+    await setPassword(SERVICE_NAME, ACCOUNT_NAME_OAUTH_CLIENT_ID, clientId);
+    await setPassword(SERVICE_NAME, ACCOUNT_NAME_OAUTH_CLIENT_SECRET, clientSecret);
+  }
+
   getAuthMethod(): 'apikey' | 'oauth' {
     return (this.conf.get('authMethod') as 'apikey' | 'oauth') || 'apikey';
   }
@@ -151,7 +174,7 @@ class ConfigManager {
   }
 
   getApiEndpoint(): string {
-    const envEndpoint = process.env.JULES_API_ENDPOINT;
+    const envEndpoint = process.env.JULES_API_URL || process.env.JULES_API_ENDPOINT;
     if (envEndpoint) {
       return envEndpoint;
     }

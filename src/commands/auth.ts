@@ -47,18 +47,19 @@ export function createAuthCommands(): Command {
       deviceCode?: boolean;
       scopes: string[];
     }) => {
+      const stored = await config.getOAuthClientCredentials();
       const clientId =
         options.clientId ||
         process.env.JULES_GOOGLE_CLIENT_ID ||
-        (config.get('googleClientId') as string);
+        stored.clientId;
       const clientSecret =
         options.clientSecret ||
         process.env.JULES_GOOGLE_CLIENT_SECRET ||
-        (config.get('googleClientSecret') as string);
+        stored.clientSecret;
 
       if (!clientId) {
         throw new CLIError(
-          'OAuth client ID is required. Provide it via --client-id, JULES_GOOGLE_CLIENT_ID env var, or "config set googleClientId <id>".',
+          'OAuth client ID is required. Provide it via --client-id, JULES_GOOGLE_CLIENT_ID env var, or by running login once with it.',
           ExitCode.INVALID_ARGS
         );
       }
@@ -69,7 +70,7 @@ export function createAuthCommands(): Command {
       } else {
         if (!clientSecret) {
           throw new CLIError(
-            'OAuth client secret is required for browser flow. Provide it via --client-secret, JULES_GOOGLE_CLIENT_SECRET env var, or "config set googleClientSecret <secret>".',
+            'OAuth client secret is required for browser flow. Provide it via --client-secret, JULES_GOOGLE_CLIENT_SECRET env var, or by running login once with it.',
             ExitCode.INVALID_ARGS
           );
         }
@@ -79,9 +80,10 @@ export function createAuthCommands(): Command {
       await config.setOAuthTokens(tokens);
       config.setAuthMethod('oauth');
       
-      // Store client credentials if provided, for future refreshes
-      if (options.clientId) config.set('googleClientId', options.clientId);
-      if (options.clientSecret) config.set('googleClientSecret', options.clientSecret);
+      // Store client credentials securely if provided, for future refreshes
+      if (clientId && clientSecret) {
+        await config.setOAuthClientCredentials(clientId, clientSecret);
+      }
 
       output(
         {
@@ -141,6 +143,7 @@ export function createAuthCommands(): Command {
     .action(async () => {
       await config.clearApiKey();
       await config.clearOAuthTokens();
+      await config.clearOAuthClientCredentials();
       config.setAuthMethod('apikey');
 
       output(
@@ -158,6 +161,7 @@ export function createAuthCommands(): Command {
     .action(async () => {
       await config.clearApiKey();
       await config.clearOAuthTokens();
+      await config.clearOAuthClientCredentials();
       config.setAuthMethod('apikey');
 
       output(

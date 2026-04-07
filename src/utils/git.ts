@@ -63,7 +63,9 @@ export function inferRepo(): RepoInfo {
  */
 export function pullSessionChanges(repo: string, branchName: string): void {
   try {
-    console.log(`Fetching branch ${branchName} from ${repo}...`);
+    // Determine remote if possible, default to origin
+    const remote = 'origin';
+    console.log(`Fetching branch ${branchName} from ${repo} (remote: ${remote})...`);
 
     // Check if the branch exists locally
     const branches = gitProvider.exec(['branch']);
@@ -73,8 +75,8 @@ export function pullSessionChanges(repo: string, branchName: string): void {
       );
       gitProvider.execInherit(['checkout', branchName]);
     } else {
-      // Try to fetch from origin
-      gitProvider.execInherit(['fetch', 'origin', `${branchName}:${branchName}`]);
+      // Try to fetch from the specified remote
+      gitProvider.execInherit(['fetch', remote, `${branchName}:${branchName}`]);
       gitProvider.execInherit(['checkout', branchName]);
     }
 

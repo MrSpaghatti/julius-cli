@@ -36,10 +36,10 @@ All notable changes to this project will be documented in this file.
 ## [0.5.0] - 2026-04-06
 
 ### Added
-- **Interactive Mode (REPL)**: New `jules-cli interactive` (alias `i`) command for persistent shell sessions.
+- **Interactive Mode (REPL)**: New `julius-cli interactive` (alias `i`) command for persistent shell sessions.
   - Maintains repository context across commands.
   - Custom `repo <owner/repo>` command to change context on the fly.
-- **Webhook Support**: New `jules-cli listen` command to start a local webhook listener.
+- **Webhook Support**: New `julius-cli listen` command to start a local webhook listener.
   - Real-time session and activity updates.
   - Automatic registration with the Jules API via `SessionsAPI.registerWebhook`.
 - **Server-side Filtering**: Efficient filtering for `sessions list` and `activities list` via the API.
@@ -53,7 +53,7 @@ All notable changes to this project will be documented in this file.
 ## [0.4.0] - 2026-04-06
 
 ### Added
-- **Session Templates**: Introduced `jules-cli templates` command group for reusable task prompts.
+- **Session Templates**: Introduced `julius-cli templates` command group for reusable task prompts.
   - `templates list`: View available templates (Bug Fix, Add Unit Tests, Refactor).
   - `templates get <id>`: Get detailed information about a template and its variables.
   - `templates use <id> [vars...]`: Start a session using a template with variable substitution.
