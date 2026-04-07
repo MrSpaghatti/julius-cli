@@ -72,9 +72,20 @@ export function formatOutput(
   return formatJSON(data);
 }
 
-export function output(data: any, format: OutputFormat = 'json', type?: string, isStream: boolean = false): void {
+export function output(
+  data: any, 
+  format: OutputFormat = 'json', 
+  type?: string, 
+  isStream: boolean = false,
+  prefix?: string
+): void {
   const formatted = formatOutput(data, format, type, isStream);
   if (formatted) {
-    console.log(formatted);
+    if (prefix) {
+      const prefixed = formatted.split('\n').map(line => `${prefix}${line}`).join('\n');
+      console.log(prefixed);
+    } else {
+      console.log(formatted);
+    }
   }
 }

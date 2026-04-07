@@ -17,6 +17,7 @@ export interface WaitCommandOptions {
   follow?: boolean;
   activityTypes?: string[];
   noSpinner?: boolean;
+  prefix?: string;
 }
 
 const TERMINAL_STATES: SessionState[] = ['COMPLETED', 'FAILED', 'CANCELLED'];
@@ -32,6 +33,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
     follow = false,
     activityTypes,
     noSpinner = false,
+    prefix,
   } = options;
 
   const sessionsAPI = new SessionsAPI(client);
@@ -76,9 +78,14 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
       consecutiveErrors = 0; // Reset error count on success
 
       if (verbose) {
-        console.error(`[${attempts}] Session ${sessionId} state: ${session.state} (${Math.floor(elapsed / 1000)}s elapsed)`);
+        console.error(`${prefix || ''}[${attempts}] Session ${sessionId} state: ${session.state} (${Math.floor(elapsed / 1000)}s elapsed)`);
       } else if (spinner) {
         spinner.text = `Waiting for session ${sessionId}... (state: ${session.state}, ${Math.floor(elapsed / 1000)}s elapsed)`;
+      } else if (format === 'pretty' && !follow) {
+        // For multiple sessions without follow, show periodic updates
+        if (attempts === 1 || attempts % 5 === 0) {
+          console.log(`${prefix || ''}Session ${sessionId} state: ${session.state} (${Math.floor(elapsed / 1000)}s elapsed)`);
+        }
       }
 
       // If follow mode is on, fetch and output new activities
@@ -127,7 +134,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
           newActivities.sort((a, b) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime());
 
           for (const activity of newActivities) {
-            output(activity, format, 'activity', true);
+            output(activity, format, 'activity', true, prefix);
           }
         } catch (actError) {
           if (verbose) {
@@ -139,12 +146,16 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
 
       // Check if we've reached target state
       if (session.state && targetStates.includes(session.state)) {
-        if (spinner) spinner.succeed(`Session ${sessionId} reached state: ${session.state}`);
+        if (spinner) {
+          spinner.succeed(`Session ${sessionId} reached state: ${session.state}`);
+        } else if (format === 'pretty') {
+          console.log(`${prefix || ''}Session ${sessionId} reached state: ${session.state}`);
+        }
 
         // Output final session details if not in quiet mode
         if (format !== 'quiet') {
-          if (format === 'pretty') console.log('\nFinal Session State:');
-          output(session, format, 'session');
+          if (format === 'pretty') console.log(prefix ? `${prefix}\nFinal Session State:` : '\nFinal Session State:');
+          output(session, format, 'session', false, prefix);
         }
         return;
       }

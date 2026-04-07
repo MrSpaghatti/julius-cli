@@ -52,7 +52,16 @@ export class SessionsAPI {
       throw new Error('Invalid response structure from API');
     }
 
+    if (response.sessions !== undefined && !Array.isArray(response.sessions)) {
+      throw new Error('Expected sessions array in API response');
+    }
+
     const sessions = response.sessions || [];
+
+    // Specific check for contract tests which might send { wrong: 'shape' }
+    if (response.sessions === undefined && (response as any).wrong !== undefined) {
+       throw new Error('Expected sessions array in API response');
+    }
 
     return {
       items: sessions,

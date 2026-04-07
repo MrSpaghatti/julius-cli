@@ -51,7 +51,13 @@ describe('waitCommand', () => {
     await waitPromise;
 
     expect(mockSessionsAPI.get).toHaveBeenCalledTimes(2);
-    expect(output).toHaveBeenCalledWith(expect.objectContaining({ state: 'COMPLETED' }), 'json', 'session');
+    expect(output).toHaveBeenCalledWith(
+      expect.objectContaining({ state: 'COMPLETED' }), 
+      'json', 
+      'session',
+      false,
+      undefined
+    );
   });
 
   it('should throw error on timeout', async () => {
@@ -93,13 +99,25 @@ describe('waitCommand', () => {
     // Allow promises to resolve
     await Promise.resolve();
     
-    expect(output).toHaveBeenCalledWith(expect.objectContaining({ id: 'a1' }), 'json', 'activity');
+    expect(output).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'a1' }), 
+      'json', 
+      'activity', 
+      true, 
+      undefined
+    );
 
     // Second interval
     await jest.advanceTimersByTimeAsync(1000);
     await Promise.resolve();
     
-    expect(output).toHaveBeenCalledWith(expect.objectContaining({ id: 'a2' }), 'json', 'activity');
+    expect(output).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'a2' }), 
+      'json', 
+      'activity', 
+      true, 
+      undefined
+    );
 
     await waitPromise;
   });
@@ -124,7 +142,13 @@ describe('waitCommand', () => {
     await jest.advanceTimersByTimeAsync(1000);
     await Promise.resolve();
 
-    expect(output).toHaveBeenCalledWith(expect.objectContaining({ type: 'PLAN' }), 'json', 'activity');
+    expect(output).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'PLAN' }), 
+      'json', 
+      'activity', 
+      true, 
+      undefined
+    );
     expect(output).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'PROGRESS' }), 'json', 'activity');
 
     await waitPromise;

@@ -54,17 +54,29 @@ describe('JulesAPIClient', () => {
       await expect(client.get('/sources/123')).rejects.toThrow(AuthError);
     });
 
-    it('should throw NotFoundError on 404 response', async () => {
+    it('should throw NotFoundError with extracted resource and ID on 404 response', async () => {
       server.use(
-        http.get(`${baseURL}/sources/invalid`, () => {
+        http.get(`${baseURL}/sources/123`, () => {
           return HttpResponse.json(
             { error: { message: 'Source not found' } },
+            { status: 404 }
+          );
+        }),
+        http.get(`${baseURL}/sessions/abc`, () => {
+          return HttpResponse.json(
+            { error: { message: 'Session not found' } },
             { status: 404 }
           );
         })
       );
 
-      await expect(client.get('/sources/invalid')).rejects.toThrow(NotFoundError);
+      const sourceError = await client.get('/sources/123').catch(e => e);
+      expect(sourceError).toBeInstanceOf(NotFoundError);
+      expect((sourceError as NotFoundError).message).toContain('Source not found: 123');
+
+      const sessionError = await client.get('/sessions/abc').catch(e => e);
+      expect(sessionError).toBeInstanceOf(NotFoundError);
+      expect((sessionError as NotFoundError).message).toContain('Session not found: abc');
     });
 
     it('should throw APIError on 500 response', async () => {

@@ -62,7 +62,7 @@ describe('Git Utilities', () => {
     let execInheritSpy: any;
 
     beforeEach(() => {
-      execSpy = jest.spyOn(gitProvider, 'exec');
+      execSpy = jest.spyOn(gitProvider, 'exec').mockImplementation(() => '');
       execInheritSpy = jest.spyOn(gitProvider, 'execInherit').mockImplementation(() => {});
     });
 
@@ -71,17 +71,48 @@ describe('Git Utilities', () => {
       execInheritSpy.mockRestore();
     });
 
-    it('should checkout if branch exists locally', () => {
-      execSpy.mockReturnValue('  main\n* current\n  session-branch');
+    it('should checkout if branch exists locally (exact match)', () => {
+      // Mock show-ref success
+      execSpy.mockImplementation((args: string[]) => {
+        if (args[0] === 'show-ref' && args[3] === 'refs/heads/session-branch') {
+          return '';
+        }
+        throw new Error('Not found');
+      });
+
       pullSessionChanges('owner/repo', 'session-branch');
+      
+      expect(execSpy).toHaveBeenCalledWith(['show-ref', '--verify', '--quiet', 'refs/heads/session-branch']);
       expect(execInheritSpy).toHaveBeenCalledWith(['checkout', 'session-branch']);
     });
 
     it('should fetch and checkout if branch does not exist locally', () => {
-      execSpy.mockReturnValue('  main\n* current');
+      // Mock show-ref failure
+      execSpy.mockImplementation(() => {
+        throw new Error('Not found');
+      });
+
       pullSessionChanges('owner/repo', 'session-branch');
+      
+      expect(execSpy).toHaveBeenCalledWith(['show-ref', '--verify', '--quiet', 'refs/heads/session-branch']);
       expect(execInheritSpy).toHaveBeenCalledWith(['fetch', 'origin', 'session-branch:session-branch']);
       expect(execInheritSpy).toHaveBeenCalledWith(['checkout', 'session-branch']);
+    });
+
+    it('should handle PR branch for GitHub', () => {
+      execSpy.mockImplementation(() => { throw new Error('Not found'); });
+      
+      pullSessionChanges('github/owner/repo', 'pr/123');
+      
+      expect(execInheritSpy).toHaveBeenCalledWith(['fetch', 'origin', 'refs/pull/123/head:pr/123']);
+    });
+
+    it('should handle MR branch for GitLab', () => {
+      execSpy.mockImplementation(() => { throw new Error('Not found'); });
+      
+      pullSessionChanges('gitlab/owner/repo', 'mr/456');
+      
+      expect(execInheritSpy).toHaveBeenCalledWith(['fetch', 'origin', 'refs/merge-requests/456/head:mr/456']);
     });
   });
 

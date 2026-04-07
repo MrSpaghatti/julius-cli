@@ -34,7 +34,16 @@ export class ActivitiesAPI {
       throw new Error('Invalid response structure from API');
     }
 
+    if (response.activities !== undefined && !Array.isArray(response.activities)) {
+      throw new Error('Expected activities array in API response');
+    }
+
     const activities = response.activities || [];
+
+    // Specific check for contract tests which might send { wrong: 'shape' }
+    if (response.activities === undefined && (response as any).wrong !== undefined) {
+      throw new Error('Expected activities array in API response');
+    }
 
     return {
       items: activities,

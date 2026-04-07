@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import chalk from 'chalk';
 import { config } from '../config/index.js';
 import { waitCommand } from './wait.js';
 import { handleError, CLIError, ExitCode } from '../utils/errors.js';
@@ -56,8 +57,12 @@ export function createWaitCommand(): Command {
       }
 
       // If multiple sessions, we run them in parallel
-      const waitPromises = sessionIds.map(sessionId => 
-        waitCommand(client, {
+      const colors = [chalk.blue, chalk.magenta, chalk.cyan, chalk.yellow, chalk.green];
+      const waitPromises = sessionIds.map((sessionId, index) => {
+        const color = colors[index % colors.length];
+        const prefix = sessionIds.length > 1 ? color(`[${sessionId}] `) : undefined;
+        
+        return waitCommand(client, {
           sessionId,
           timeout,
           interval,
@@ -67,10 +72,29 @@ export function createWaitCommand(): Command {
           follow: !!options.follow,
           activityTypes: options.activityType,
           noSpinner: sessionIds.length > 1,
-        })
-      );
+          prefix,
+        });
+      });
 
-      await Promise.all(waitPromises);
+      const results = await Promise.allSettled(waitPromises);
+      
+      const failed = results.filter(r => r.status === 'rejected');
+      if (failed.length > 0) {
+        if (options.format === 'pretty') {
+          console.error(chalk.red(`\n${failed.length} session(s) failed or timed out:`));
+          failed.forEach((r, i) => {
+            const error = (r as PromiseRejectedResult).reason;
+            console.error(chalk.red(`  - ${error.message || error}`));
+          });
+        }
+        
+        // Exit with non-zero if any failed
+        process.exit(ExitCode.GENERAL_ERROR);
+      }
+
+      if (options.format === 'pretty' && sessionIds.length > 1) {
+        console.log(chalk.green(`\nAll ${sessionIds.length} sessions reached target state.`));
+      }
     });
 
   return wait;

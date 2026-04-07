@@ -52,7 +52,7 @@ export function createActivitiesCommands(): Command {
       const filter = filters.length > 0 ? filters.join(' AND ') : undefined;
 
       let result;
-      const shouldFetchAll = !!options.all;
+      const shouldFetchAll = options.all || (options.type && options.type.length > 0) || options.author;
 
       if (shouldFetchAll) {
         result = await fetchAllPages(

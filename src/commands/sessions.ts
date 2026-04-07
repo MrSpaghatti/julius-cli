@@ -192,7 +192,7 @@ export function createSessionsCommands(): Command {
         const filter = filters.length > 0 ? filters.join(' AND ') : undefined;
 
         let result;
-        const shouldFetchAll = !!options.all;
+        const shouldFetchAll = options.all || options.repo || (options.state && options.state.length > 0);
 
         let spinner;
         if (options.format === 'pretty' && shouldFetchAll) {

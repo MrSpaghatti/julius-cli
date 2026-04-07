@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import * as http from 'node:http';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import chalk from 'chalk';
+import localtunnel from 'localtunnel';
 import { getClient } from '../utils/client.js';
 import { SessionsAPI } from '../api/sessions.js';
 import { output } from '../output/formatter.js';
@@ -13,12 +14,34 @@ export function createListenCommand(): Command {
     .option('--register <session-id>', 'Automatically register this listener for a session')
     .option('--host <host>', 'Public host URL for registration (if different from localhost)')
     .option('--secret <secret>', 'Secret key for HMAC signature verification (optional)')
-    .action(async (options: { port: string; register?: string; host?: string; secret?: string }) => {
+    .option('--tunnel', 'Create a public tunnel for the local port using localtunnel')
+    .action(async (options: { port: string; register?: string; host?: string; secret?: string; tunnel?: boolean }) => {
       const port = parseInt(options.port, 10);
-      const host = options.host || `http://localhost:${port}`;
+      let host = options.host || `http://localhost:${port}`;
       const secret = options.secret;
 
-      if (options.register && host.includes('localhost')) {
+      let tunnel: localtunnel.Tunnel | undefined;
+      if (options.tunnel) {
+        try {
+          console.log(chalk.blue('Creating tunnel...'));
+          tunnel = await localtunnel({ port });
+          host = tunnel.url;
+          console.log(chalk.green(`Tunnel created: ${host}`));
+          
+          tunnel.on('close', () => {
+            console.log(chalk.yellow('\nTunnel closed.'));
+          });
+          
+          tunnel.on('error', (err) => {
+            console.error(chalk.red(`\nTunnel error: ${err.message}`));
+          });
+        } catch (err: any) {
+          console.error(chalk.red(`Failed to create tunnel: ${err.message}`));
+          process.exit(1);
+        }
+      }
+
+      if (options.register && host.includes('localhost') && !options.tunnel) {
         console.log(chalk.yellow('Warning: Registering a webhook with localhost. This will only work if the API is also running locally or via a tunnel.'));
       }
 
@@ -164,6 +187,18 @@ export function createListenCommand(): Command {
         console.log(chalk.gray(`Endpoint: ${host}`));
         console.log(chalk.gray('Press Ctrl+C to stop\n'));
       });
+
+      // Cleanup on exit
+      const cleanup = () => {
+        if (tunnel) {
+          tunnel.close();
+        }
+        server.close();
+        process.exit(0);
+      };
+
+      process.on('SIGINT', cleanup);
+      process.on('SIGTERM', cleanup);
 
       if (options.register) {
         try {
