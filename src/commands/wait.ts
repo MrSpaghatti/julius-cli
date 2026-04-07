@@ -52,6 +52,8 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
   let attempts = 0;
   let currentToken: string | undefined = undefined;
   const seenActivityIds = new Set<string>();
+  let consecutiveErrors = 0;
+  const MAX_CONSECUTIVE_ERRORS = 10;
 
   while (true) {
     attempts++;
@@ -70,6 +72,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
       // Poll session state
       const session = await sessionsAPI.get(sessionId);
       lastSession = session;
+      consecutiveErrors = 0; // Reset error count on success
 
       if (verbose) {
         console.error(`[${attempts}] Session ${sessionId} state: ${session.state} (${Math.floor(elapsed / 1000)}s elapsed)`);
@@ -80,12 +83,11 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
       // If follow mode is on, fetch and output new activities
       if (follow) {
         try {
-          let hasMore = true;
           let newActivities: Activity[] = [];
-          
-          while (hasMore) {
+
+          while (true) {
             const result = await activitiesAPI.list(sessionId, 100, currentToken);
-            
+
             for (const act of result.items) {
               if (!seenActivityIds.has(act.id)) {
                 newActivities.push(act);
@@ -93,15 +95,10 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
               }
             }
 
-            if (result.nextPageToken) {
-              currentToken = result.nextPageToken;
-            } else {
-              hasMore = false;
+            if (!result.nextPageToken) {
+              break;
             }
-            
-            if (result.items.length === 0) {
-              hasMore = false;
-            }
+            currentToken = result.nextPageToken;
           }
 
           // Filter by activity type if provided
@@ -139,19 +136,28 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
       // Wait before next poll
       await sleep(intervalMs);
     } catch (error: any) {
-      // If it's a transient error (e.g. network), we might want to retry a few times 
-      // even beyond the client's internal retries.
+      consecutiveErrors++;
+
       if (verbose) {
-        console.error(`Poll attempt ${attempts} failed: ${error.message}`);
+        console.error(`Poll attempt ${attempts} failed (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${error.message}`);
       }
-      
-      // If it's a 404, the session is gone, so stop.
+
+      // If it's a 404, the session is gone, so stop immediately
       if (error.status === 404) {
         if (spinner) spinner.fail(`Session ${sessionId} not found.`);
         throw error;
       }
 
-      // For other errors, wait and continue unless we've failed too many times in a row
+      // If we've had too many consecutive errors, give up
+      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        if (spinner) spinner.fail(`Too many consecutive API errors, giving up after ${MAX_CONSECUTIVE_ERRORS} attempts`);
+        throw new CLIError(
+          `Too many consecutive API errors waiting for session ${sessionId}. Last error: ${error.message}`,
+          ExitCode.NETWORK_ERROR
+        );
+      }
+
+      // For other errors, wait and continue
       await sleep(intervalMs);
     }
   }

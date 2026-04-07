@@ -49,63 +49,51 @@ export function createInteractiveCommand(): Command {
           continue;
         }
 
-        // Prepare args for commander
-        const args = trimmed.split(/\s+/);
-        
-        // If the command is a sub-command of sessions/activities, 
-        // and currentRepo is set, and --repo is not already present,
-        // we can try to inject it.
-        // This is a bit complex to do perfectly with commander's internals.
-        
-        // For now, let's just try to parse the command
-        try {
-          // Create a new command instance to avoid global state issues
-          // Wait, cli is already populated with all commands.
-          // We can't easily re-parse from the root because of 'interactive' being the current command.
-          
-          // Actually, we should probably only allow subcommands here.
-          // But commander doesn't easily support re-parsing a string on an existing command tree 
-          // that is already executing.
-          
-          // Let's try a simpler approach: use a child process or just run the commands directly if we can.
-          // But running them directly means we need to import all of them.
-          
-          // Let's use 'parseAsync' but we need to be careful with process.exit
-          
-          const fullArgs = ['node', 'jules-cli', ...args];
-          
-          // Inject --repo if it's a sessions command and not provided
-          if (currentRepo && (args[0] === 'sessions' || args[0] === 's')) {
-            if (!args.includes('--repo') && !args.includes('-r')) {
-               // find where to inject it. Usually after the subcommand.
-               if (args.length > 1) {
-                  fullArgs.splice(4, 0, '--repo', currentRepo);
-               }
-            }
-          }
+        // SECURITY: Validate command against allowlist to prevent command injection
+        const ALLOWED_COMMANDS = new Set([
+          'sessions', 's',
+          'activities', 'a',
+          'auth',
+          'sources',
+          'wait',
+          'config',
+          'templates',
+          'listen',
+        ]);
 
-          // We need to bypass process.exit if commander tries to exit on help or error
-          // This is tricky.
-          
-          // Alternative: call the handlers directly. But that requires re-implementing 
-          // a lot of commander's logic for options parsing.
-          
-          console.log(chalk.gray(`Executing: ${args.join(' ')}`));
-          
-          // For now, let's just spawn ourselves as a subprocess to keep it clean and simple
-          // and avoid polluting the current process's commander state.
-          
-          // Wait, spawning a subprocess is slow. 
-          // Let's try to use the library-level command objects.
-          
-          await cli.parseAsync(fullArgs);
-          
+        const parts = trimmed.split(/\s+/);
+        const command = parts[0];
+
+        if (!ALLOWED_COMMANDS.has(command)) {
+          console.error(chalk.red(`Unknown command: ${command}`));
+          console.log(chalk.gray('Supported commands: ' + Array.from(ALLOWED_COMMANDS).join(', ')));
+          console.log('');
+          continue;
+        }
+
+        try {
+          console.log(chalk.gray(`Executing: ${trimmed}`));
+
+          const { spawn } = await import('node:child_process');
+          await new Promise<void>((resolve) => {
+            const scriptPath = process.argv[1];
+            if (!scriptPath || !scriptPath.length) {
+              console.error(chalk.red('Cannot determine script path'));
+              resolve();
+              return;
+            }
+
+            // Spawn subprocess with user input as arguments
+            // Node's spawn handles argument escaping safely
+            const cp = spawn('node', [scriptPath, ...parts], { stdio: 'inherit' });
+            cp.on('close', () => resolve());
+            cp.on('error', (err) => {
+              console.error(chalk.red(`Failed to execute command: ${err.message}`));
+              resolve();
+            });
+          });
         } catch (err: any) {
-          if (err.code === 'commander.helpDisplayed' || err.code === 'commander.unknownCommand') {
-            // ignore
-          } else {
-             console.error(chalk.red(`Error: ${err.message}`));
-          }
+          console.error(chalk.red(`Error: ${err.message}`));
         }
         console.log('');
       }

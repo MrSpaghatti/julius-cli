@@ -15,30 +15,61 @@ export function createListenCommand(): Command {
       const port = parseInt(options.port, 10);
       const host = options.host || `http://localhost:${port}`;
 
+      // Security: Limit maximum body size to prevent DOS
+      const MAX_BODY_SIZE = 1048576; // 1MB
+
       const server = http.createServer((req, res) => {
         if (req.method === 'POST') {
           let body = '';
-          req.on('data', chunk => {
-            body += chunk.toString();
-          });
-          req.on('end', () => {
-            try {
-              const data = JSON.parse(body);
-              console.log(chalk.blue(`\n[${new Date().toLocaleTimeString()}] Webhook received:`));
-              
-              if (data.session) {
-                output(data.session, 'pretty', 'session');
-              } else if (data.activity) {
-                output(data.activity, 'pretty', 'activity');
-              } else {
-                console.log(JSON.stringify(data, null, 2));
-              }
 
-              res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ status: 'ok' }));
-            } catch (e) {
-              res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Invalid JSON' }));
+          // Validate Content-Length header if present
+          const contentLength = parseInt(req.headers['content-length'] || '0', 10);
+          if (contentLength > MAX_BODY_SIZE) {
+            res.writeHead(413, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Payload too large' }));
+            return;
+          }
+
+          req.on('data', (chunk) => {
+            body += chunk.toString();
+            // Kill connection if payload exceeds limit
+            if (body.length > MAX_BODY_SIZE) {
+              req.destroy();
+              res.writeHead(413, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Payload too large' }));
+            }
+          });
+
+          req.on('end', () => {
+            // Skip if connection was destroyed
+            if (!res.headersSent) {
+              try {
+                const data = JSON.parse(body);
+                console.log(chalk.blue(`\n[${new Date().toLocaleTimeString()}] Webhook received:`));
+
+                if (data.session) {
+                  output(data.session, 'pretty', 'session');
+                } else if (data.activity) {
+                  output(data.activity, 'pretty', 'activity');
+                } else {
+                  console.log(JSON.stringify(data, null, 2));
+                }
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ status: 'ok' }));
+              } catch (e: any) {
+                const errorMsg = e instanceof SyntaxError ? 'Invalid JSON' : 'Processing error';
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: errorMsg }));
+              }
+            }
+          });
+
+          req.on('error', (err) => {
+            console.error(chalk.red(`Request error: ${err.message}`));
+            if (!res.headersSent) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Internal server error' }));
             }
           });
         } else {

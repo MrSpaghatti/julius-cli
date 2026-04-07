@@ -31,7 +31,7 @@ export class SessionsAPI {
     pageToken?: string,
     filter?: string
   ): Promise<PaginatedResponse<Session>> {
-    const params: any = { pageSize };
+    const params: Record<string, unknown> = { pageSize };
     if (pageToken) {
       params.pageToken = pageToken;
     }
@@ -39,10 +39,24 @@ export class SessionsAPI {
       params.filter = filter;
     }
 
-    const response = await this.client.get<any>('/sessions', params);
+    interface SessionListResponse {
+      sessions?: Session[];
+      nextPageToken?: string;
+      totalSize?: number;
+    }
+
+    const response = await this.client.get<SessionListResponse>('/sessions', params);
+
+    // Validate response structure
+    if (!response || typeof response !== 'object') {
+      throw new Error('Invalid response structure from API');
+    }
+    if (!Array.isArray(response.sessions)) {
+      throw new Error('Expected sessions array in API response');
+    }
 
     return {
-      items: response.sessions || [],
+      items: response.sessions,
       nextPageToken: response.nextPageToken,
       totalSize: response.totalSize,
     };

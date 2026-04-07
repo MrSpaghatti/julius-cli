@@ -10,7 +10,7 @@ export class ActivitiesAPI {
     pageToken?: string,
     filter?: string
   ): Promise<PaginatedResponse<Activity>> {
-    const params: any = { pageSize };
+    const params: Record<string, unknown> = { pageSize };
     if (pageToken) {
       params.pageToken = pageToken;
     }
@@ -18,13 +18,27 @@ export class ActivitiesAPI {
       params.filter = filter;
     }
 
-    const response = await this.client.get<any>(
+    interface ActivityListResponse {
+      activities?: Activity[];
+      nextPageToken?: string;
+      totalSize?: number;
+    }
+
+    const response = await this.client.get<ActivityListResponse>(
       `/sessions/${sessionId}/activities`,
       params
     );
 
+    // Validate response structure
+    if (!response || typeof response !== 'object') {
+      throw new Error('Invalid response structure from API');
+    }
+    if (!Array.isArray(response.activities)) {
+      throw new Error('Expected activities array in API response');
+    }
+
     return {
-      items: response.activities || [],
+      items: response.activities,
       nextPageToken: response.nextPageToken,
       totalSize: response.totalSize,
     };

@@ -6,7 +6,7 @@ export class JulesAPIClient {
   private axios: AxiosInstance;
   private baseURL: string;
 
-  constructor(apiKey: string, baseURL: string = 'https://jules.googleapis.com/v1alpha') {
+  constructor(apiKey: string, baseURL: string = process.env.JULES_API_URL || 'https://jules.googleapis.com/v1alpha') {
     this.baseURL = baseURL;
     this.axios = axios.create({
       baseURL: this.baseURL,
@@ -24,7 +24,15 @@ export class JulesAPIClient {
         // Respect Retry-After header for rate limiting
         const retryAfter = error.response?.headers['retry-after'];
         if (retryAfter) {
-          return parseInt(retryAfter) * 1000;
+          const parsedInt = parseInt(retryAfter, 10);
+          if (!isNaN(parsedInt) && String(parsedInt) === retryAfter) {
+            return parsedInt * 1000;
+          }
+          const parsedDate = new Date(retryAfter).getTime();
+          if (!isNaN(parsedDate)) {
+            const delay = parsedDate - Date.now();
+            return delay > 0 ? delay : exponentialDelay(retryCount);
+          }
         }
         return exponentialDelay(retryCount);
       },
@@ -62,19 +70,41 @@ export class JulesAPIClient {
       );
     }
 
+    // Extract error message from response with proper type safety
+    const errorMessage = this.extractErrorMessage(data, status);
+
     // Not found errors
     if (status === 404) {
-      const message = (data as any)?.error?.message || 'Resource not found';
-      throw new NotFoundError('Resource', message);
+      throw new NotFoundError('Resource', errorMessage);
     }
 
     // API errors
-    const errorMessage =
-      (data as any)?.error?.message ||
-      (data as any)?.message ||
-      `API request failed with status ${status}`;
-
     throw new APIError(errorMessage, status);
+  }
+
+  private extractErrorMessage(data: unknown, status: number): string {
+    // Validate data is an object before accessing properties
+    if (typeof data !== 'object' || data === null) {
+      return `API request failed with status ${status}`;
+    }
+
+    const obj = data as Record<string, unknown>;
+
+    // Try nested error object
+    if (typeof obj.error === 'object' && obj.error !== null) {
+      const errorObj = obj.error as Record<string, unknown>;
+      if (typeof errorObj.message === 'string') {
+        return errorObj.message;
+      }
+    }
+
+    // Try top-level message
+    if (typeof obj.message === 'string') {
+      return obj.message;
+    }
+
+    // Fallback
+    return `API request failed with status ${status}`;
   }
 
   async get<T>(path: string, params?: any): Promise<T> {

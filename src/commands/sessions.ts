@@ -342,11 +342,17 @@ export function createSessionsCommands(): Command {
 
       const output = session.outputs?.[0];
       const branchName = output?.branch?.name;
-      const repo = session.sourceContext.source.replace('sources/github/', '');
 
       if (!branchName) {
         throw new Error(`No branch output found for session ${sessionId}`);
       }
+
+      // Validate and parse source format
+      const sourceMatch = session.sourceContext.source.match(/^sources\/(.+)$/);
+      if (!sourceMatch || !sourceMatch[1]) {
+        throw new InvalidArgsError(`Invalid source format: ${session.sourceContext.source}`);
+      }
+      const repo = sourceMatch[1];
 
       pullSessionChanges(repo, branchName);
     });
@@ -360,6 +366,12 @@ export function createSessionsCommands(): Command {
       const api = new SessionsAPI(client);
 
       const session = await api.get(sessionId);
+
+      if (session.state !== 'COMPLETED') {
+        throw new Error(
+          `Session ${sessionId} is not in COMPLETED state (Current: ${session.state}). Can only diff completed sessions.`
+        );
+      }
 
       const output = session.outputs?.[0];
       const branchName = output?.branch?.name;
