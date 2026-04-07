@@ -4,11 +4,13 @@ import {
   formatPrettySession,
   formatPrettySource,
   formatPrettyActivity,
+  formatPrettyTemplate,
 } from './pretty.js';
 import {
   formatTableSessions,
   formatTableSources,
   formatTableActivities,
+  formatTableTemplates,
 } from './table.js';
 
 export function formatOutput(data: any, format: OutputFormat, type?: string): string {
@@ -34,6 +36,10 @@ export function formatOutput(data: any, format: OutputFormat, type?: string): st
       const activities = Array.isArray(data) ? data : (data.activities || [data]);
       return formatTableActivities(activities);
     }
+    if (type === 'template') {
+      const templates = Array.isArray(data) ? data : Object.values(data);
+      return formatTableTemplates(templates);
+    }
     return formatJSON(data);
   }
 
@@ -48,6 +54,10 @@ export function formatOutput(data: any, format: OutputFormat, type?: string): st
 
   if (type === 'activity') {
     return formatPrettyActivity(data);
+  }
+
+  if (type === 'template') {
+    return formatPrettyTemplate(data);
   }
 
   // Default to JSON if type not recognized

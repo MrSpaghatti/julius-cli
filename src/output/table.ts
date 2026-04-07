@@ -1,6 +1,6 @@
 import Table from 'cli-table3';
 import chalk from 'chalk';
-import type { Session, Source, Activity } from '../api/types.js';
+import type { Session, Source, Activity, Template } from '../api/types.js';
 
 export function formatTableSessions(sessions: Session[]): string {
   const table = new Table({
@@ -68,6 +68,27 @@ export function formatTableActivities(activities: Activity[]): string {
       activity.author,
       content,
       created,
+    ]);
+  }
+
+  return table.toString();
+}
+
+export function formatTableTemplates(templates: Template[]): string {
+  const table = new Table({
+    head: [
+      chalk.cyan('ID'),
+      chalk.cyan('Name'),
+      chalk.cyan('Description'),
+    ],
+    chars: { mid: '', 'left-mid': '', 'mid-mid': '', 'right-mid': '' },
+  });
+
+  for (const template of templates) {
+    table.push([
+      template.id,
+      template.name,
+      template.description || 'N/A',
     ]);
   }
 

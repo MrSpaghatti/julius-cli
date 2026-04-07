@@ -1,23 +1,12 @@
 import { Command } from 'commander';
 import ora from 'ora';
 import { config } from '../config/index.js';
-import { JulesAPIClient } from '../api/client.js';
 import { SourcesAPI } from '../api/sources.js';
 import { output } from '../output/formatter.js';
-import { AuthError, InvalidArgsError } from '../utils/errors.js';
+import { InvalidArgsError } from '../utils/errors.js';
 import { fetchAllPages } from '../utils/pagination.js';
+import { getClient } from '../utils/client.js';
 import type { OutputFormat } from '../api/types.js';
-
-async function getClient(): Promise<JulesAPIClient> {
-  const apiKey = await config.getApiKey();
-  if (!apiKey) {
-    throw new AuthError(
-      'No API key found.',
-      'Set one with: jules-cli auth set <key>'
-    );
-  }
-  return new JulesAPIClient(apiKey, config.getApiEndpoint());
-}
 
 export function createSourcesCommands(): Command {
   const sources = new Command('sources').description('Manage GitHub repositories');

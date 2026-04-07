@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import type { Session, Source, Activity } from '../api/types.js';
+import type { Session, Source, Activity, Template } from '../api/types.js';
 
 export function formatPrettySession(session: Session): string {
   const lines: string[] = [];
@@ -42,6 +42,35 @@ export function formatPrettySession(session: Session): string {
   }
 
   lines.push(''); // Empty line between sessions
+
+  return lines.join('\n');
+}
+
+export function formatPrettyTemplate(template: Template | Template[]): string {
+  const templatesList = Array.isArray(template) ? template : [template];
+  const lines: string[] = [];
+
+  for (const t of templatesList) {
+    lines.push(chalk.bold.cyan(`Template: ${t.name} (${t.id})`));
+    if (t.description) {
+      lines.push(chalk.gray(`  Description: ${t.description}`));
+    }
+    lines.push(chalk.gray(`  Prompt: ${t.prompt}`));
+
+    if (t.variables && t.variables.length > 0) {
+      lines.push(chalk.gray(`  Variables:`));
+      for (const v of t.variables) {
+        let varLine = `    - ${chalk.yellow(v.name)}`;
+        if (v.required) varLine += ` ${chalk.red('(required)')}`;
+        if (v.defaultValue) varLine += ` ${chalk.gray(`[default: ${v.defaultValue}]`)}`;
+        lines.push(varLine);
+        if (v.description) {
+          lines.push(chalk.gray(`      ${v.description}`));
+        }
+      }
+    }
+    lines.push('');
+  }
 
   return lines.join('\n');
 }

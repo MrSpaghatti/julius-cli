@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { Command } from 'commander';
 
 // Mock config
@@ -38,13 +38,27 @@ jest.unstable_mockModule('../../../src/utils/pagination.js', () => ({
 // Mock git
 jest.unstable_mockModule('../../../src/utils/git.js', () => ({
   inferGitHubRepo: jest.fn(),
+  pullSessionChanges: jest.fn(),
+  diffSessionChanges: jest.fn(),
 }));
 
-const { createSessionsCommands } = await import('../../../src/commands/sessions.js');
+// Mock client utility
+jest.unstable_mockModule('../../../src/utils/client.js', () => ({
+  getClient: jest.fn(),
+}));
+
+const { createSessionsCommands } = await import(
+  '../../../src/commands/sessions.js'
+);
 const { config } = await import('../../../src/config/index.js');
 const { output } = await import('../../../src/output/formatter.js');
 const { fetchAllPages } = await import('../../../src/utils/pagination.js');
-const { inferGitHubRepo } = await import('../../../src/utils/git.js');
+const {
+  inferGitHubRepo,
+  pullSessionChanges,
+  diffSessionChanges,
+} = await import('../../../src/utils/git.js');
+const { getClient } = await import('../../../src/utils/client.js');
 
 describe('Sessions Commands', () => {
   let sessionsCmd: Command;
@@ -54,6 +68,7 @@ describe('Sessions Commands', () => {
     sessionsCmd = createSessionsCommands();
     (config.getApiKey as any).mockResolvedValue('test-key');
     (config.getApiEndpoint as any).mockReturnValue('https://api.test');
+    (getClient as any).mockResolvedValue({});
   });
 
   describe('create command', () => {
@@ -62,20 +77,43 @@ describe('Sessions Commands', () => {
       (mockSessionsAPIInstance.create as any).mockResolvedValue(mockSession);
 
       const root = new Command().addCommand(sessionsCmd);
-      await root.parseAsync(['node', 'test', 'sessions', 'create', '--repo', 'owner/repo', '--prompt', 'test-prompt']);
+      await root.parseAsync([
+        'node',
+        'test',
+        'sessions',
+        'create',
+        '--repo',
+        'owner/repo',
+        '--prompt',
+        'test-prompt',
+      ]);
 
-      expect(mockSessionsAPIInstance.create).toHaveBeenCalledWith(expect.objectContaining({
-        prompt: 'test-prompt',
-        sourceContext: expect.objectContaining({ source: 'sources/github/owner/repo' })
-      }));
+      expect(mockSessionsAPIInstance.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          prompt: 'test-prompt',
+          sourceContext: expect.objectContaining({
+            source: 'sources/github/owner/repo',
+          }),
+        })
+      );
       expect(output).toHaveBeenCalledWith(mockSession, 'json', 'session');
     });
 
     it('should throw error if repo format is invalid', async () => {
       const root = new Command().addCommand(sessionsCmd);
       sessionsCmd.exitOverride();
-      await expect(root.parseAsync(['node', 'test', 'sessions', 'create', '--repo', 'invalid-repo', '--prompt', 'p']))
-        .rejects.toThrow(/Repository must be in format/);
+      await expect(
+        root.parseAsync([
+          'node',
+          'test',
+          'sessions',
+          'create',
+          '--repo',
+          'invalid-repo',
+          '--prompt',
+          'p',
+        ])
+      ).rejects.toThrow(/Repository must be in format/);
     });
 
     it('should use pretty output format', async () => {
@@ -83,7 +121,18 @@ describe('Sessions Commands', () => {
       (mockSessionsAPIInstance.create as any).mockResolvedValue(mockSession);
 
       const root = new Command().addCommand(sessionsCmd);
-      await root.parseAsync(['node', 'test', 'sessions', 'create', '--repo', 'o/r', '--prompt', 'p', '--format', 'pretty']);
+      await root.parseAsync([
+        'node',
+        'test',
+        'sessions',
+        'create',
+        '--repo',
+        'o/r',
+        '--prompt',
+        'p',
+        '--format',
+        'pretty',
+      ]);
 
       expect(output).toHaveBeenCalledWith(mockSession, 'pretty', 'session');
     });
@@ -91,7 +140,9 @@ describe('Sessions Commands', () => {
 
   describe('list command', () => {
     it('should list sessions', async () => {
-      const mockResult = { items: [{ id: '123', sourceContext: { source: 's' } }] };
+      const mockResult = {
+        items: [{ id: '123', sourceContext: { source: 's' } }],
+      };
       (mockSessionsAPIInstance.list as any).mockResolvedValue(mockResult);
 
       const root = new Command().addCommand(sessionsCmd);
@@ -106,12 +157,19 @@ describe('Sessions Commands', () => {
         items: [
           { id: '1', sourceContext: { source: 'sources/github/owner/repo1' } },
           { id: '2', sourceContext: { source: 'sources/github/owner/repo2' } },
-        ]
+        ],
       };
       (fetchAllPages as any).mockResolvedValue(mockResult);
 
       const root = new Command().addCommand(sessionsCmd);
-      await root.parseAsync(['node', 'test', 'sessions', 'list', '--repo', 'owner/repo1']);
+      await root.parseAsync([
+        'node',
+        'test',
+        'sessions',
+        'list',
+        '--repo',
+        'owner/repo1',
+      ]);
 
       // Filtering by repo triggers fetchAllPages
       expect(fetchAllPages).toHaveBeenCalled();
@@ -126,9 +184,20 @@ describe('Sessions Commands', () => {
   describe('interaction commands', () => {
     it('should send a message', async () => {
       const root = new Command().addCommand(sessionsCmd);
-      await root.parseAsync(['node', 'test', 'sessions', 'send', '123', '--message', 'hello']);
+      await root.parseAsync([
+        'node',
+        'test',
+        'sessions',
+        'send',
+        '123',
+        '--message',
+        'hello',
+      ]);
 
-      expect(mockSessionsAPIInstance.sendMessage).toHaveBeenCalledWith('123', 'hello');
+      expect(mockSessionsAPIInstance.sendMessage).toHaveBeenCalledWith(
+        '123',
+        'hello'
+      );
     });
 
     it('should approve a plan', async () => {
@@ -143,6 +212,37 @@ describe('Sessions Commands', () => {
       await root.parseAsync(['node', 'test', 'sessions', 'cancel', '123']);
 
       expect(mockSessionsAPIInstance.cancel).toHaveBeenCalledWith('123');
+    });
+
+    it('should pull changes', async () => {
+      const mockSession = {
+        id: '123',
+        state: 'COMPLETED',
+        sourceContext: { source: 'sources/github/owner/repo' },
+        outputs: [{ branch: { name: 'session-branch' } }],
+      };
+      (mockSessionsAPIInstance.get as any).mockResolvedValue(mockSession);
+
+      const root = new Command().addCommand(sessionsCmd);
+      await root.parseAsync(['node', 'test', 'sessions', 'pull', '123']);
+
+      expect(pullSessionChanges).toHaveBeenCalledWith(
+        'owner/repo',
+        'session-branch'
+      );
+    });
+
+    it('should diff changes', async () => {
+      const mockSession = {
+        id: '123',
+        outputs: [{ branch: { name: 'session-branch' } }],
+      };
+      (mockSessionsAPIInstance.get as any).mockResolvedValue(mockSession);
+
+      const root = new Command().addCommand(sessionsCmd);
+      await root.parseAsync(['node', 'test', 'sessions', 'diff', '123']);
+
+      expect(diffSessionChanges).toHaveBeenCalledWith('session-branch');
     });
   });
 });
