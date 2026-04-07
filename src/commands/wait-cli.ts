@@ -8,8 +8,8 @@ import type { SessionState, OutputFormat } from '../api/types.js';
 export function createWaitCommand(): Command {
   const wait = new Command('wait');
 
-  const defaultPollInterval = config.get('pollInterval') || 5000;
-  const defaultMaxPollAttempts = config.get('maxPollAttempts') || 120;
+  const defaultPollInterval = config.getRequired('pollInterval');
+  const defaultMaxPollAttempts = config.getRequired('maxPollAttempts');
   const defaultTimeout = (defaultMaxPollAttempts * (defaultPollInterval / 1000)).toString();
 
   wait

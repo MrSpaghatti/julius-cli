@@ -89,13 +89,8 @@ export async function handleCreateSession(options: CreateSessionParams) {
       sessionId: session.id,
       format: options.format,
       follow: true, // both --wait and --follow should follow
-      interval: config.get('pollInterval')
-        ? config.get('pollInterval')! / 1000
-        : 5,
-      timeout:
-        config.get('maxPollAttempts') && config.get('pollInterval')
-          ? (config.get('maxPollAttempts')! * config.get('pollInterval')!) / 1000
-          : 600,
+      interval: config.getRequired('pollInterval') / 1000,
+      timeout: (config.getRequired('maxPollAttempts') * config.getRequired('pollInterval')) / 1000,
     });
   }
 }

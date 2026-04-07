@@ -7,6 +7,7 @@ jest.unstable_mockModule('../../../src/config/index.js', () => ({
     getApiKey: jest.fn(),
     getApiEndpoint: jest.fn(),
     get: jest.fn(),
+    getRequired: jest.fn(),
   },
 }));
 
@@ -24,10 +25,19 @@ describe('Wait Command CLI', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    waitCmd = createWaitCommand();
     (config.getApiKey as any).mockResolvedValue('test-key');
     (config.getApiEndpoint as any).mockReturnValue('https://api.test');
     (config.get as any).mockReturnValue(undefined);
+    (config.getRequired as any).mockImplementation((key: string) => {
+      const defaults: Record<string, any> = {
+        pollInterval: 5000,
+        maxPollAttempts: 120,
+        defaultFormat: 'json',
+        defaultPageSize: 30,
+      };
+      return defaults[key];
+    });
+    waitCmd = createWaitCommand();
   });
 
   it('should call waitCommand with correct arguments', async () => {

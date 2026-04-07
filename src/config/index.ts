@@ -1,6 +1,7 @@
 import Conf from 'conf';
 import { setPassword, getPassword, deletePassword } from 'cross-keychain';
 import type { CLIConfig } from '../api/types.js';
+import { CLIError, ExitCode } from '../utils/errors.js';
 
 const SERVICE_NAME = 'jules-cli';
 const ACCOUNT_NAME = 'api-key';
@@ -45,6 +46,17 @@ class ConfigManager {
 
   get<K extends keyof CLIConfig>(key: K): CLIConfig[K] | undefined {
     return this.conf.get(key);
+  }
+
+  getRequired<K extends keyof CLIConfig>(key: K): NonNullable<CLIConfig[K]> {
+    const val = this.conf.get(key);
+    if (val === undefined || val === null) {
+      throw new CLIError(
+        `Configuration key '${key}' is not set`,
+        ExitCode.INVALID_ARGS
+      );
+    }
+    return val as NonNullable<CLIConfig[K]>;
   }
 
   set<K extends keyof CLIConfig>(key: K, value: CLIConfig[K]): void {

@@ -227,7 +227,7 @@ describe('Sessions Commands', () => {
       await root.parseAsync(['node', 'test', 'sessions', 'pull', '123']);
 
       expect(pullSessionChanges).toHaveBeenCalledWith(
-        'owner/repo',
+        'github/owner/repo',
         'session-branch'
       );
     });
@@ -235,6 +235,7 @@ describe('Sessions Commands', () => {
     it('should diff changes', async () => {
       const mockSession = {
         id: '123',
+        state: 'COMPLETED',
         outputs: [{ branch: { name: 'session-branch' } }],
       };
       (mockSessionsAPIInstance.get as any).mockResolvedValue(mockSession);
