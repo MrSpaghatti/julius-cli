@@ -87,9 +87,58 @@ Build a TypeScript CLI tool that wraps the Jules REST API for programmatic contr
 
 ---
 
+## Phase 7: Google OAuth Support (Planned)
+
+### 1. OAuth 2.0 Browser Flow
+- [ ] `auth login` command — opens browser to Google consent screen, captures auth code via loopback HTTP server, exchanges for access + refresh tokens
+- [ ] PKCE (S256) code challenge for security on the loopback redirect
+- [ ] Random `state` parameter to prevent CSRF
+
+### 2. Device Code Flow (Headless)
+- [ ] `auth login --device-code` — prints URL + code to terminal, polls token endpoint until user completes auth in a separate browser
+
+### 3. Token Storage & Refresh
+- [ ] Store OAuth access token + refresh token in system keychain (separate keys from API key)
+- [ ] Auto-refresh expired access tokens transparently before each API call
+- [ ] `auth logout` alias for `auth clear` that removes all credentials
+
+### 4. API Client Updates
+- [ ] `JulesAPIClient` supports both `X-Goog-Api-Key` (API key) and `Authorization: Bearer <token>` (OAuth)
+- [ ] Constructor accepts a `TokenProvider` interface — either static API key or live-refreshing OAuth credential
+- [ ] `CLIConfig` gains an `authMethod: 'apikey' | 'oauth'` field to track which is active
+
+### 5. Auth Method Resolution Order
+Priority (highest first):
+1. `JULES_OAUTH_TOKEN` env var → direct Bearer token (CI/automation)
+2. `JULES_API_KEY` env var → X-Goog-Api-Key (existing)
+3. Stored OAuth tokens via `auth login` → Bearer token with auto-refresh
+4. Stored API key via `auth set` → X-Goog-Api-Key (existing)
+
+### 6. New Files
+- `src/utils/oauth.ts` — PKCE generation, browser redirect flow, device code flow, token exchange/refresh
+- `src/utils/token-provider.ts` — `TokenProvider` interface + `ApiKeyProvider` and `OAuthProvider` implementations
+
+### 7. Updated Files
+- `src/commands/auth.ts` — add `login`, `login --device-code`, `logout` subcommands; update `status` to show auth method
+- `src/config/index.ts` — add `getOAuthTokens`, `setOAuthTokens`, `clearOAuthTokens`, `getAuthMethod`, `setAuthMethod`
+- `src/api/client.ts` — accept `TokenProvider` instead of raw API key string
+- `src/api/types.ts` — add `authMethod` to `CLIConfig`
+- `src/utils/client.ts` — `getClient()` resolves the active token provider based on priority order
+
+### 8. New Dependency
+- `google-auth-library` — Google's official Node.js OAuth2 client; handles token exchange and refresh
+
+### 9. Test Coverage
+- Unit tests for PKCE generation (correct length, encoding)
+- Unit tests for `OAuthProvider.getToken()` — returns cached token, detects expiry, calls refresh
+- Unit tests for auth method resolution in `getClient()`
+- Integration tests for `auth login` and `auth status` with mocked Google token endpoints
+
+---
+
 ## Future Roadmap
 
-### Phase 7: Advanced Features
+### Phase 8: Advanced Features
 - [ ] Batch session creation from a single prompt
 - [ ] Group operations (bulk cancel, bulk pull)
 - [ ] Cost and quota monitoring tools

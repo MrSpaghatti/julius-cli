@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - Planned
+
+### Added
+- **Google OAuth 2.0 Support**: New `auth login` command for Google account authentication alongside existing API key flow.
+  - Browser-based flow: opens consent screen in default browser, captures token via loopback redirect.
+  - Device code flow: `auth login --device-code` for headless/SSH environments.
+  - Automatic token refresh — expired access tokens are refreshed transparently before each API call.
+- **`auth logout`**: New subcommand (alias for `auth clear`) to remove all stored credentials.
+- **Auth method resolution**: Priority chain — `JULES_OAUTH_TOKEN` env var → `JULES_API_KEY` env var → OAuth tokens → API key.
+- **Updated `auth status`**: Shows active auth method (`apikey` / `oauth`), token expiry, and user identity for OAuth sessions.
+
+### Changed
+- `JulesAPIClient` constructor now accepts a `TokenProvider` interface instead of a raw API key string, enabling both API key and OAuth token modes.
+- `auth clear` now removes both API key and OAuth tokens.
+
+### New Dependencies
+- `google-auth-library` — Google's official Node.js client for OAuth2/token exchange.
+
+## [0.5.1] - 2026-04-06
+
+### Security
+- Added HMAC-SHA256 webhook signature verification to `listen` command (`--secret` flag).
+- Added IP-based rate limiting (100 req/IP per 60s) to webhook listener.
+- Added `ConfigManager.getRequired()` to surface missing config values explicitly.
+
+### Added
+- Integration test suite for API contract validation (`test/integration/api-contract.test.ts`).
+  - Tests for invalid response structures in Sessions and Activities APIs.
+  - Tests for pagination token handling.
+  - Tests for retry limit behavior in wait command.
+
 ## [0.5.0] - 2026-04-06
 
 ### Added

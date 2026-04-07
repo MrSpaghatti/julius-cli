@@ -43,9 +43,22 @@ npx jules-cli-but-better <command>
 
 ## Quick Start
 
+### Option A: API Key (current)
+
 1. **Set your API key:**
 ```bash
 jules-cli auth set YOUR_API_KEY
+```
+
+### Option B: Google OAuth (v0.6.0, planned)
+
+1. **Login with your Google account:**
+```bash
+jules-cli auth login
+# Opens browser → consent → tokens stored automatically
+
+# Headless / SSH environments:
+jules-cli auth login --device-code
 ```
 
 2. **List connected repositories:**
@@ -192,13 +205,45 @@ jules-cli sessions list --state COMPLETED --repo owner/repo
 jules-cli sessions list --state COMPLETED --all
 ```
 
+## Authentication
+
+Two authentication methods are supported (v0.6.0+):
+
+| Method | Command | Best for |
+|--------|---------|----------|
+| API Key | `auth set <key>` | Simple scripts, CI/CD with API key |
+| Google OAuth | `auth login` | Interactive use, Google account access |
+
+Auth resolution order (highest priority first):
+1. `JULES_OAUTH_TOKEN` env var — direct OAuth Bearer token
+2. `JULES_API_KEY` env var — API key
+3. Stored OAuth tokens (from `auth login`)
+4. Stored API key (from `auth set`)
+
+### Auth Commands
+
+```bash
+# API key
+jules-cli auth set YOUR_API_KEY
+jules-cli auth clear
+
+# Google OAuth (v0.6.0)
+jules-cli auth login                # browser flow
+jules-cli auth login --device-code  # headless / SSH
+
+# Check status (shows method, validity, user identity)
+jules-cli auth status
+jules-cli auth logout               # alias for auth clear
+```
+
 ## Configuration
 
 Configuration is stored in `~/.config/jules-cli/config.json` (or platform-specific location).
 
 You can also use environment variables:
 
-- `JULES_API_KEY` - API key (overrides config)
+- `JULES_API_KEY` - API key (overrides stored key)
+- `JULES_OAUTH_TOKEN` - OAuth Bearer token (overrides all stored credentials)
 - `JULES_API_ENDPOINT` - API endpoint URL (default: https://jules.googleapis.com/v1alpha)
 
 ## Exit Codes
