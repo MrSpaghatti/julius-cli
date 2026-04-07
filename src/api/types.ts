@@ -40,6 +40,12 @@ export interface Session {
     githubRepoContext?: {
       startingBranch: string;
     };
+    gitlabRepoContext?: {
+      startingBranch: string;
+    };
+    bitbucketRepoContext?: {
+      startingBranch: string;
+    };
   };
   prompt: string;
   automationMode?: AutomationMode;

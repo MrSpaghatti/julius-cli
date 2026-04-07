@@ -61,15 +61,21 @@ export async function handleCreateSession(options: CreateSessionParams) {
     spinner = ora(`Creating session for ${sourceId}...`).start();
   }
 
+  const sourceContext: Session['sourceContext'] = { source };
+  if (options.branch) {
+    if (provider === 'gitlab') {
+      sourceContext.gitlabRepoContext = { startingBranch: options.branch };
+    } else if (provider === 'bitbucket') {
+      sourceContext.bitbucketRepoContext = { startingBranch: options.branch };
+    } else {
+      sourceContext.githubRepoContext = { startingBranch: options.branch };
+    }
+  }
+
   const session = await api.create({
     prompt: options.prompt,
     title: options.title,
-    sourceContext: {
-      source,
-      githubRepoContext: options.branch
-        ? { startingBranch: options.branch }
-        : undefined,
-    },
+    sourceContext,
     automationMode: options.autoPr ? 'AUTO_CREATE_PR' : 'NONE',
     requirePlanApproval: options.requireApproval || false,
   });
