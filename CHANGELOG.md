@@ -24,6 +24,21 @@ All notable changes to this project will be documented in this file.
 - Improved `--repo` inference to correctly identify providers from local git remotes.
 - Refactored `src/utils/client.ts` with `ProviderTokenWrapper` for extensible header injection.
 
+## [0.7.1] - 2026-05-10
+
+### Added
+- **TUI**: Continued terminal UX refinements and interactive workflow improvements.
+- **Agentic DX**: Developer experience updates for agent-assisted workflows.
+- **CI/CD**: Expanded CI matrix, stricter linting, coverage uploads, and release publishing workflow.
+
+### Changed
+- **Dependency updates**: Modernized the project stack and kept tooling aligned with current Node releases.
+- **Test fixes**: Stabilized test execution and coverage reporting in automation.
+- **Audit fixes**: Addressed package and workflow hygiene issues.
+
+### Fixed
+- **Desloppify**: Cleaned up remaining code quality issues identified during repository hardening.
+
 ## [0.6.0] - 2026-04-07
 
 ### Added
