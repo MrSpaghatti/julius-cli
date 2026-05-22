@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.1] - 2026-04-07
+
+### Added
+- Upgraded CI/CD pipeline to include Node 22.x
+- Added release workflow to automate npm publishing
+- Configured files field in package.json and updated .npmignore
+
 ## [0.7.0] - 2026-04-07
 
 ### Added
