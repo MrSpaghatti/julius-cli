@@ -9,6 +9,7 @@ import { createTemplatesCommands } from './commands/templates.js';
 import { createInteractiveCommand } from './commands/interactive.js';
 import { createListenCommand } from './commands/listen.js';
 import { createCompletionCommand } from './commands/completion.js';
+import { createTuiCommand } from './commands/tui.js';
 import { handleError } from './utils/errors.js';
 
 export const cli = new Command();
@@ -33,6 +34,7 @@ cli.addCommand(createTemplatesCommands());
 cli.addCommand(createInteractiveCommand());
 cli.addCommand(createListenCommand());
 cli.addCommand(createCompletionCommand());
+cli.addCommand(createTuiCommand());
 
 // Error handling
 cli.exitOverride();
