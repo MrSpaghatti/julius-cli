@@ -66,6 +66,7 @@ describe('Auth Commands', () => {
     // Default mock behavior
     (mockSourcesAPIInstance.list as any).mockResolvedValue({ items: [] });
     (config.getOAuthTokens as any).mockResolvedValue(undefined);
+    (config.getOAuthClientCredentials as any).mockResolvedValue({});
     (config.getAuthMethod as any).mockReturnValue('apikey');
     (getClient as any).mockResolvedValue({});
   });

@@ -106,7 +106,7 @@ export function createAuthCommands(): Command {
       let client;
       let authenticated = false;
       let error = null;
-      let methodInfo: any = { method: authMethod };
+      const methodInfo: any = { method: authMethod };
 
       try {
         client = await getClient();

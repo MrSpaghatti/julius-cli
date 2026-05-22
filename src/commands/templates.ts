@@ -51,7 +51,7 @@ export function createTemplatesCommands(): Command {
         const description = await rl.question('Description: ');
         console.log('Enter prompt (use {{var}} for variables). Press Enter twice to finish:');
         
-        let promptLines: string[] = [];
+        const promptLines: string[] = [];
         while (true) {
           const line = await rl.question('');
           if (line === '' && promptLines.length > 0 && promptLines[promptLines.length - 1] === '') {

@@ -77,16 +77,19 @@ describe('waitCommand', () => {
   it('should follow activities', async () => {
     (mockSessionsAPI.get as any)
       .mockResolvedValueOnce({ id: '123', state: 'EXECUTING' })
+      .mockResolvedValueOnce({ id: '123', state: 'EXECUTING' })
       .mockResolvedValueOnce({ id: '123', state: 'COMPLETED' });
 
     (mockActivitiesAPI.list as any).mockResolvedValueOnce({
-      items: [{ id: 'a1', type: 'MESSAGE', content: 'hello', createTime: '2026-04-06T20:00:00Z' }],
-      nextPageToken: 'token1'
-    }).mockResolvedValueOnce({
       items: [],
       nextPageToken: undefined
     });
     
+    (mockActivitiesAPI.list as any).mockResolvedValueOnce({
+      items: [{ id: 'a1', type: 'MESSAGE', content: 'hello', createTime: '2026-04-06T20:00:00Z' }],
+      nextPageToken: undefined
+    });
+
     (mockActivitiesAPI.list as any).mockResolvedValueOnce({
       items: [{ id: 'a2', type: 'PROGRESS', content: 'done', createTime: '2026-04-06T20:05:00Z' }],
       nextPageToken: undefined
@@ -123,9 +126,14 @@ describe('waitCommand', () => {
   });
 
   it('should filter activities by type', async () => {
-    (mockSessionsAPI.get as any).mockResolvedValueOnce({ id: '123', state: 'COMPLETED' });
+    (mockSessionsAPI.get as any)
+      .mockResolvedValueOnce({ id: '123', state: 'EXECUTING' })
+      .mockResolvedValueOnce({ id: '123', state: 'COMPLETED' });
 
     (mockActivitiesAPI.list as any).mockResolvedValueOnce({
+      items: [],
+      nextPageToken: undefined
+    }).mockResolvedValueOnce({
       items: [
         { id: 'a1', type: 'PLAN', content: 'plan', createTime: '2026-04-06T20:00:00Z' },
         { id: 'a2', type: 'PROGRESS', content: 'progress', createTime: '2026-04-06T20:05:00Z' }
