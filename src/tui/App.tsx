@@ -19,6 +19,7 @@ export function App(): React.ReactNode {
   const [error, setError] = useState<string | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [activitiesError, setActivitiesError] = useState<string | null>(null);
   const [filterState, setFilterState] = useState<string>('all');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const prevFilterStateRef = useRef(filterState);
@@ -42,6 +43,7 @@ export function App(): React.ReactNode {
 
   const fetchActivities = useCallback(async (sessionId: string) => {
     setActivitiesLoading(true);
+    setActivitiesError(null);
     try {
       const client = await getClient();
       const api = new ActivitiesAPI(client);
@@ -49,8 +51,9 @@ export function App(): React.ReactNode {
       if (result?.items) {
         setActivities(result.items);
       }
-    } catch {
+    } catch (err) {
       setActivities([]);
+      setActivitiesError(err instanceof Error ? err.message : 'Failed to load activities');
     } finally {
       setActivitiesLoading(false);
     }
@@ -221,7 +224,7 @@ export function App(): React.ReactNode {
                   <Text color="gray"> ({activities.length})</Text>
                 </Box>
                 <Box flexGrow={1}>
-                  <ActivityPanel activities={activities} loading={activitiesLoading} />
+                  <ActivityPanel activities={activities} loading={activitiesLoading} error={activitiesError} />
                 </Box>
               </Box>
             </>

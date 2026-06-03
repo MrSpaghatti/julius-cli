@@ -17,6 +17,15 @@ function makeActivity(overrides: Partial<Activity> = {}): Activity {
 }
 
 describe('ActivityPanel', () => {
+  it('shows error state when error is set', () => {
+    const { lastFrame } = render(
+      React.createElement(ActivityPanel, { activities: [], loading: false, error: 'API rate limit exceeded' })
+    );
+    const frame = lastFrame()!;
+    expect(frame).toContain('API rate limit exceeded');
+    expect(frame).toContain('Will retry automatically');
+  });
+
   it('shows loading state when empty and loading', () => {
     const { lastFrame } = render(
       React.createElement(ActivityPanel, { activities: [], loading: true })

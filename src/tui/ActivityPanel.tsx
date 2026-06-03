@@ -29,9 +29,21 @@ function truncate(s: string, max: number): string {
 interface ActivityPanelProps {
   activities: Activity[];
   loading: boolean;
+  error?: string | null;
 }
 
-export function ActivityPanel({ activities, loading }: ActivityPanelProps) {
+export function ActivityPanel({ activities, loading, error }: ActivityPanelProps) {
+  if (error) {
+    return (
+      <Box borderStyle="single" borderColor="red" paddingX={1} paddingY={1}>
+        <Text color="red">{error}</Text>
+        <Box marginTop={1}>
+          <Text color="gray">Will retry automatically...</Text>
+        </Box>
+      </Box>
+    );
+  }
+
   if (loading && activities.length === 0) {
     return (
       <Box paddingX={1} paddingY={1}>

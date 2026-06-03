@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import { getClient } from '../utils/client.js';
@@ -29,9 +29,11 @@ export function CreateSessionDialog({ onCreated, onCancel }: CreateSessionDialog
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
 
-  if (repo && phase === 'prompt') {
-    setPhase('title');
-  }
+  useEffect(() => {
+    if (repo && phase === 'prompt') {
+      setPhase('title');
+    }
+  }, [repo, phase]);
 
   useInput((input, key) => {
     if (key.escape && !submitting) {
