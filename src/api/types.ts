@@ -9,6 +9,19 @@ export interface Source {
   };
 }
 
+export type SessionProvider = 'github' | 'gitlab' | 'bitbucket';
+
+export interface SessionRepoContext {
+  startingBranch: string;
+}
+
+export interface SessionSourceContext {
+  source: string;
+  githubRepoContext?: SessionRepoContext;
+  gitlabRepoContext?: SessionRepoContext;
+  bitbucketRepoContext?: SessionRepoContext;
+}
+
 export type SessionState =
   | 'PENDING'
   | 'PLANNING'
@@ -35,18 +48,7 @@ export interface Session {
   name: string; // "sessions/123456789"
   id: string; // "123456789"
   title: string;
-  sourceContext: {
-    source: string;
-    githubRepoContext?: {
-      startingBranch: string;
-    };
-    gitlabRepoContext?: {
-      startingBranch: string;
-    };
-    bitbucketRepoContext?: {
-      startingBranch: string;
-    };
-  };
+  sourceContext: SessionSourceContext;
   prompt: string;
   automationMode?: AutomationMode;
   requirePlanApproval?: boolean;
@@ -77,74 +79,4 @@ export interface PaginatedResponse<T> {
 export interface WebhookConfig {
   url: string;
   secret?: string;
-}
-
-// CLI Configuration
-export interface CLIConfig {
-  apiKey?: string;
-  apiEndpoint?: string; // Default: https://jules.googleapis.com/v1alpha
-  authMethod?: 'apikey' | 'oauth';
-  defaultFormat?: OutputFormat;
-  defaultPageSize?: number; // Default: 30, max: 100
-  pollInterval?: number; // Default: 5000ms
-  maxPollAttempts?: number; // Default: 120
-}
-
-export interface Template {
-  id: string;
-  name: string;
-  description?: string;
-  prompt: string;
-  variables?: TemplateVariable[];
-}
-
-export interface TemplateVariable {
-  name: string;
-  description?: string;
-  defaultValue?: string;
-  required?: boolean;
-}
-
-export type OutputFormat = 'json' | 'pretty' | 'quiet' | 'table';
-
-// Command Options
-export interface CreateSessionOptions {
-  repo: string;
-  prompt: string;
-  title?: string;
-  branch?: string;
-  autoCreatePr?: boolean;
-  requireApproval?: boolean;
-  format?: OutputFormat;
-}
-
-export interface ListSessionsOptions {
-  repo?: string;
-  state?: SessionState[];
-  since?: string;
-  pageSize?: number;
-  pageToken?: string;
-  format?: OutputFormat;
-}
-
-export interface SendMessageOptions {
-  sessionId: string;
-  message: string;
-  format?: OutputFormat;
-}
-
-export interface GetSessionOptions {
-  sessionId: string;
-  format?: OutputFormat;
-}
-
-export interface ListSourcesOptions {
-  pageSize?: number;
-  pageToken?: string;
-  format?: OutputFormat;
-}
-
-export interface GetSourceOptions {
-  sourceId: string;
-  format?: OutputFormat;
 }

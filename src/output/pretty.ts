@@ -1,5 +1,6 @@
 import chalk from 'chalk';
-import type { Session, Source, Activity, Template } from '../api/types.js';
+import type { Activity, Session, Source } from '../api/types.js';
+import type { Template } from '../templates/types.js';
 import { formatState } from './common.js';
 
 export function formatPrettySession(session: Session): string {
@@ -9,12 +10,12 @@ export function formatPrettySession(session: Session): string {
   lines.push(chalk.gray(`  ID: ${session.id}`));
   lines.push(chalk.gray(`  State: ${formatState(session.state || 'UNKNOWN')}`));
 
-  if (session.sourceContext.source) {
+  if (session.sourceContext?.source) {
     const source = session.sourceContext.source.replace('sources/github/', '');
     lines.push(chalk.gray(`  Repository: ${source}`));
   }
 
-  if (session.sourceContext.githubRepoContext?.startingBranch) {
+  if (session.sourceContext?.githubRepoContext?.startingBranch) {
     lines.push(chalk.gray(`  Branch: ${session.sourceContext.githubRepoContext.startingBranch}`));
   }
 

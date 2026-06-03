@@ -1,6 +1,7 @@
 import Table from 'cli-table3';
 import chalk from 'chalk';
-import type { Session, Source, Activity, Template } from '../api/types.js';
+import type { Activity, Session, Source } from '../api/types.js';
+import type { Template } from '../templates/types.js';
 import { formatState } from './common.js';
 
 function createTable(head: string[]): Table.Table {
