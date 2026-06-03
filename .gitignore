@@ -36,3 +36,7 @@ config.json
 *.tmp
 .cache/
 .desloppify/
+
+# Sisyphus work artifacts
+.sisyphus/
+*.png
