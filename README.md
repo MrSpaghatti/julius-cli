@@ -85,7 +85,20 @@ julius-cli sessions get <session-id>
 julius-cli interactive --repo owner/repo
 ```
 
-## Commands
+### Terminal Dashboard (TUI) 🆕
+
+Launch a real-time terminal dashboard for monitoring and managing sessions (v0.7.0+):
+
+```bash
+julius-cli tui
+```
+
+The TUI dashboard features:
+- **Live session list** with state-colored indicators (green=completed, yellow=executing, red=failed, etc.)
+- **Real-time activity stream** — fetch and display session activities as they arrive
+- **Inline session creation** — press `c` to create a new session with prompt, repo, and title
+- **State filtering** — press `1-7` to filter sessions by state (PENDING→CANCELLED), `a` for all
+- **Keyboard navigation** — `↑↓` to select, `Enter` to expand, `q` to quit
 
 ### Interactive Mode (REPL) 🆕
 

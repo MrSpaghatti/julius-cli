@@ -1,44 +1,36 @@
 # Julius CLI Status
 
-**Version:** 0.7.0  
-**Status:** Stable / Production-Ready  
-**Last Updated:** 2026-04-07
+**Version:** 0.7.0
+**Status:** In Active Development
+**Last Updated:** 2026-06-02
 
 ## Overview
 
-Julius CLI is an AI-first command-line tool designed for the Jules REST API. It provides a robust, JSON-centric interface for managing AI-driven sessions, activities, and prompt templates, with a focus on automation and security.
+Julius CLI is an AI-first command-line tool for the Jules REST API. It provides a JSON-first interface for managing AI-driven sessions, activities, and prompt templates, targeting both human and AI-agent usage.
 
-## Recent Achievements (v0.7.0) ✅
+## Current State
 
-- **Interactive Mode (REPL) Overhaul:** Refactored REPL to execute commands in-process using Commander's internal APIs for much faster performance. Added macro support (`macro <name> <cmd...>`, `!<name>`) and basic tab-completion.
-- **Multi-Provider Parity:** Expanded support beyond GitHub to include GitLab and Bitbucket.
-  - **Improved Git Fetching:** `sessions pull` now correctly handles GitLab Merge Requests and Bitbucket Pull Requests.
-  - **Provider-Specific Tokens:** Support for `JULES_GITHUB_API_KEY`, `JULES_GITLAB_API_KEY`, and `JULES_BITBUCKET_API_KEY` for multi-tenant environments.
-- **Template Management:** Added subcommands to create, edit, delete, and import prompt templates locally.
-- **Robust Repository Inference:** Improved `--repo` flag handling to automatically infer the provider from local git configuration when not explicitly provided.
+- **Build:** Passing
+- **Tests:** 175 tests across 22 suites — all passing
+- **TypeScript:** Strict mode, zero errors
+- **Lint:** 0 errors, 48 warnings (`no-explicit-any`)
+- **Key Architecture:**
+  - Output abstraction (OutputChannel) with CLI and Null implementations
+  - Discriminated-union formatter (FormattedOutput)
+  - React Ink TUI dashboard with session list, activity stream, and create dialog
+  - Multi-provider support: GitHub, GitLab, Bitbucket
+  - API key + Google OAuth 2.0 (Web + Device Flow) authentication
+  - Webhook server for real-time session events
+  - Interactive REPL with macros and tab-completion
+  - MSW-based HTTP mocking in integration tests
 
-## Recent Achievements (v0.6.0) ✅
+## Roadmap
 
-- **Rebranded:** Project renamed from `jules-cli` to `julius-cli` for a cleaner identity.
-- **Google OAuth 2.0:** Full support for OAuth 2.0 with PKCE (browser flow) and Device Code flow.
-- **Secure Storage:** All sensitive credentials (API keys, OAuth client secrets, and tokens) are stored in the system keychain.
+- **Phase 1 (Done):** Foundation hardening — output abstraction layer, code quality, test coverage, documentation consolidation
+- **Phase 2 (Done):** React Ink TUI dashboard — session panels, live streaming, multi-session monitoring
+- **Phase 3 (Next):** TUI polish (batch orchestration, shell completion, npm publishing, CI/CD)
 
-## Current Features 🚀
+## Notes
 
-- **Authentication:** Triple support for API keys, Google OAuth 2.0, and provider-specific tokens.
-- **Session Management:** Create, list, get, approve, and cancel AI sessions across GitHub, GitLab, and Bitbucket.
-- **Activity Monitoring:** Real-time tailing of session progress via polling or webhooks.
-- **Interactive Mode:** Advanced REPL with macros and repository context persistence.
-- **Prompt Templates:** Reusable, variable-based templates with local management commands.
-
-## Roadmap 🗺️
-
-- **v0.8.0:** Multi-session orchestration and batch commands.
-- **v1.0.0:** Final stability release and public documentation portal.
-
-## Quality Metrics 📊
-
-- **Build Status:** Passing ✅
-- **Test Coverage:** >85% (130+ tests) ✅
-- **Linting:** Clean (ESLint/Prettier) ✅
-- **Type Safety:** High (TypeScript) ✅
+- Original plan replaced by `.sisyphus/plans/julius-v1-foundation.md`
+- Previous session plans archived in `.sisyphus/archive/`
