@@ -6,6 +6,7 @@ import { ActivitiesAPI } from '../api/activities.js';
 import type { Session, Activity } from '../api/types.js';
 import { SessionList } from './SessionList.js';
 import { ActivityPanel } from './ActivityPanel.js';
+import { ChatPanel } from './ChatPanel.js';
 import { CreateSessionDialog } from './CreateSessionDialog.js';
 import { formatRelativeTime, getStateColor, extractRepo, FILTER_STATES } from './utils.js';
 
@@ -22,6 +23,7 @@ export function App(): React.ReactNode {
   const [activitiesError, setActivitiesError] = useState<string | null>(null);
   const [filterState, setFilterState] = useState<string>('all');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [chatMode, setChatMode] = useState(false);
   const prevFilterStateRef = useRef(filterState);
 
   const fetchSessions = useCallback(async () => {
@@ -79,6 +81,11 @@ export function App(): React.ReactNode {
   useInput((input, key) => {
     if (showCreateDialog) return;
 
+    if (chatMode) {
+      // Chat mode handles its own input (Escape, typing, Enter to send)
+      return;
+    }
+
     if (input === 'q') {
       exit();
       return;
@@ -87,11 +94,19 @@ export function App(): React.ReactNode {
       setShowCreateDialog(true);
       return;
     }
+    if (key.return) {
+      if (sessions[selectedIndex]) {
+        setChatMode(true);
+      }
+      return;
+    }
     if (key.upArrow) {
       setSelectedIndex(Math.max(0, selectedIndex - 1));
+      return;
     }
     if (key.downArrow) {
       setSelectedIndex(Math.min(sessions.length - 1, selectedIndex + 1));
+      return;
     }
 
     const stateIndex = FILTER_STATES.findIndex(s => s[0] === input && s !== 'all');
@@ -116,6 +131,20 @@ export function App(): React.ReactNode {
     setShowCreateDialog(false);
     fetchSessions();
   }, [fetchSessions]);
+
+  const handleSendMessage = useCallback(async (message: string) => {
+    const session = sessions[selectedIndex];
+    if (!session) throw new Error('No session selected');
+    const client = await getClient();
+    const api = new SessionsAPI(client);
+    await api.sendMessage(session.id, message);
+    // Refresh activities to show the new message and response
+    await fetchActivities(session.id);
+  }, [selectedIndex, sessions, fetchActivities]);
+
+  const handleLeaveChat = useCallback(() => {
+    setChatMode(false);
+  }, []);
 
   const selectedSession = sessions[selectedIndex];
 
@@ -158,7 +187,21 @@ export function App(): React.ReactNode {
         </Box>
 
         <Box width="55%" borderStyle="single" flexDirection="column">
-          {selectedSession ? (
+          {!selectedSession ? (
+            <Box paddingX={1} paddingY={1} flexGrow={1} justifyContent="center" alignItems="center">
+              <Text color="gray">{loading ? 'Loading...' : 'Select a session to view details'}</Text>
+            </Box>
+          ) : chatMode ? (
+            <ChatPanel
+              activities={activities}
+              sessionId={selectedSession.id}
+              sessionState={selectedSession.state}
+              loading={activitiesLoading}
+              error={activitiesError}
+              onSendMessage={handleSendMessage}
+              onExit={handleLeaveChat}
+            />
+          ) : (
             <>
               <Box paddingX={1} flexDirection="column">
                 <Box>
@@ -228,10 +271,6 @@ export function App(): React.ReactNode {
                 </Box>
               </Box>
             </>
-          ) : (
-            <Box paddingX={1} paddingY={1} flexGrow={1} justifyContent="center" alignItems="center">
-              <Text color="gray">{loading ? 'Loading...' : 'Select a session to view details'}</Text>
-            </Box>
           )}
         </Box>
       </Box>
@@ -239,9 +278,13 @@ export function App(): React.ReactNode {
       <Box borderStyle="single" paddingX={1}>
         {error ? (
           <Text color="red">{error}</Text>
+        ) : chatMode ? (
+          <Text color="cyan">Chat mode — Esc to return to dashboard</Text>
         ) : (
           <>
             <Text color="gray">↑↓ Navigate</Text>
+            <ColorDivider />
+            <Text color="gray">Enter Chat</Text>
             <ColorDivider />
             <Text color="gray">c Create</Text>
             <ColorDivider />
