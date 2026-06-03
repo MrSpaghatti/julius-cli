@@ -83,7 +83,7 @@ describe('Wait Command CLI', () => {
 
   it('should throw error if API key is missing', async () => {
     (config.getApiKey as any).mockResolvedValue(null);
-    const root = new Command().addCommand(waitCmd);
+    new Command().addCommand(waitCmd);
     // Use a custom error handler or just expect it to fail
     // wait-cli.ts calls handleError which might process.exit
     // For unit tests we want to see it throwing

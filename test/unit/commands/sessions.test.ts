@@ -1,5 +1,6 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { Command } from 'commander';
+import { Output } from '../../../src/output/manager.js';
 
 // Mock config
 jest.unstable_mockModule('../../../src/config/index.js', () => ({
@@ -18,6 +19,8 @@ jest.unstable_mockModule('../../../src/config/index.js', () => ({
 // Mock output
 jest.unstable_mockModule('../../../src/output/formatter.js', () => ({
   output: jest.fn(),
+  outputFormatted: jest.fn(),
+  createFormatterContext: jest.fn(() => ({ headerShown: false })),
 }));
 
 // Mock API
@@ -56,7 +59,7 @@ const { createSessionsCommands } = await import(
   '../../../src/commands/sessions.js'
 );
 const { config } = await import('../../../src/config/index.js');
-const { output } = await import('../../../src/output/formatter.js');
+const { output, outputFormatted } = await import('../../../src/output/formatter.js');
 const { fetchAllPages } = await import('../../../src/utils/pagination.js');
 const {
   inferRepo,
@@ -85,6 +88,7 @@ describe('Sessions Commands', () => {
       (mockSessionsAPIInstance.create as any).mockResolvedValue(mockSession);
 
       const root = new Command().addCommand(sessionsCmd);
+      const spy = jest.spyOn(Output, 'info').mockImplementation(() => {});
       await root.parseAsync([
         'node',
         'test',
@@ -104,7 +108,10 @@ describe('Sessions Commands', () => {
           }),
         })
       );
-      expect(output).toHaveBeenCalledWith(mockSession, 'json', 'session');
+      expect(outputFormatted).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'session', session: mockSession }),
+        'json'
+      );
     });
 
     it('should throw error if repo format is invalid', async () => {
@@ -142,7 +149,10 @@ describe('Sessions Commands', () => {
         'pretty',
       ]);
 
-      expect(output).toHaveBeenCalledWith(mockSession, 'pretty', 'session');
+      expect(outputFormatted).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'session', session: mockSession }),
+        'pretty'
+      );
     });
   });
 
@@ -157,7 +167,7 @@ describe('Sessions Commands', () => {
       await root.parseAsync(['node', 'test', 'sessions', 'list']);
 
       expect(mockSessionsAPIInstance.list).toHaveBeenCalled();
-      expect(output).toHaveBeenCalled();
+      expect(outputFormatted).toHaveBeenCalled();
     });
 
     it('should filter by repo', async () => {
@@ -180,10 +190,9 @@ describe('Sessions Commands', () => {
 
       // Filtering by repo triggers fetchAllPages
       expect(fetchAllPages).toHaveBeenCalled();
-      expect(output).toHaveBeenCalledWith(
-        expect.objectContaining({ sessions: mockResult.items }),
-        'json',
-        'session'
+      expect(outputFormatted).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'sessions', sessions: mockResult.items }),
+        'json'
       );
     });
   });

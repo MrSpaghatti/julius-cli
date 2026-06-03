@@ -3,6 +3,7 @@ import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { cli } from '../../src/cli.js';
 import { config } from '../../src/config/index.js';
+import { Output } from '../../src/output/manager.js';
 
 const baseURL = 'https://jules.googleapis.com/v1alpha';
 const server = setupServer();
@@ -51,7 +52,7 @@ describe('Integration Flows', () => {
       })
     );
 
-    const outputSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const outputSpy = jest.spyOn(Output, 'log').mockImplementation(() => {});
     
     await cli.parseAsync(['node', 'test', 'sessions', 'create', '--repo', 'owner/repo', '--prompt', 'test prompt']);
     

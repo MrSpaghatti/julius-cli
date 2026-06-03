@@ -1,9 +1,7 @@
 import { jest } from '@jest/globals';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { cli } from '../../src/cli.js';
 import { config } from '../../src/config/index.js';
-import { getClient } from '../../src/utils/client.js';
 import { SessionsAPI } from '../../src/api/sessions.js';
 import { ActivitiesAPI } from '../../src/api/activities.js';
 import { ApiKeyProvider } from '../../src/utils/token-provider.js';

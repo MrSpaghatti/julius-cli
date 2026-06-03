@@ -48,7 +48,7 @@ jest.unstable_mockModule('../../../src/utils/client.js', () => ({
   getClient: jest.fn(),
 }));
 
-import { AuthError, CLIError, ExitCode } from '../../../src/utils/errors.js';
+import { AuthError } from '../../../src/utils/errors.js';
 const { createAuthCommands } = await import('../../../src/commands/auth.js');
 const { config } = await import('../../../src/config/index.js');
 const { output } = await import('../../../src/output/formatter.js');
@@ -66,6 +66,10 @@ describe('Auth Commands', () => {
     // Default mock behavior
     (mockSourcesAPIInstance.list as any).mockResolvedValue({ items: [] });
     (config.getOAuthTokens as any).mockResolvedValue(undefined);
+    (config.getOAuthClientCredentials as any).mockResolvedValue({
+      clientId: undefined,
+      clientSecret: undefined,
+    });
     (config.getAuthMethod as any).mockReturnValue('apikey');
     (getClient as any).mockResolvedValue({});
   });

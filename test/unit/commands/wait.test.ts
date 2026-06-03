@@ -19,10 +19,11 @@ jest.unstable_mockModule('../../../src/api/activities.js', () => ({
 // Mock output
 jest.unstable_mockModule('../../../src/output/formatter.js', () => ({
   output: jest.fn(),
+  outputFormatted: jest.fn(),
 }));
 
 const { waitCommand } = await import('../../../src/commands/wait.js');
-const { output } = await import('../../../src/output/formatter.js');
+const { output, outputFormatted } = await import('../../../src/output/formatter.js');
 
 describe('waitCommand', () => {
   const client = {} as any;
@@ -51,12 +52,10 @@ describe('waitCommand', () => {
     await waitPromise;
 
     expect(mockSessionsAPI.get).toHaveBeenCalledTimes(2);
-    expect(output).toHaveBeenCalledWith(
-      expect.objectContaining({ state: 'COMPLETED' }), 
-      'json', 
-      'session',
-      false,
-      undefined
+    expect(outputFormatted).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'session', session: expect.objectContaining({ state: 'COMPLETED' }) }),
+      'json',
+      expect.any(Object)
     );
   });
 
@@ -67,7 +66,6 @@ describe('waitCommand', () => {
 
     await jest.advanceTimersByTimeAsync(1000);
 
-    // The next one triggers the rejection
     await Promise.all([
       jest.advanceTimersByTimeAsync(1000),
       expect(waitPromise).rejects.toThrow(/Timeout/)
@@ -85,38 +83,31 @@ describe('waitCommand', () => {
     }).mockResolvedValueOnce({
       items: [],
       nextPageToken: undefined
-    });
-    
-    (mockActivitiesAPI.list as any).mockResolvedValueOnce({
+    }).mockResolvedValueOnce({
       items: [{ id: 'a2', type: 'PROGRESS', content: 'done', createTime: '2026-04-06T20:05:00Z' }],
       nextPageToken: undefined
     });
 
     const waitPromise = waitCommand(client, { sessionId: '123', interval: 1, follow: true });
 
-    // First interval
     await jest.advanceTimersByTimeAsync(1000);
-    // Allow promises to resolve
     await Promise.resolve();
     
-    expect(output).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'a1' }), 
-      'json', 
-      'activity', 
-      true, 
-      undefined
+    // a1 is seen on the first pass (isFirstPass=true) and not output
+    // a2 is new on the second pass and IS output
+    expect(outputFormatted).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'activity', activity: expect.objectContaining({ id: 'a1' }) }),
+      'json',
+      expect.any(Object)
     );
 
-    // Second interval
     await jest.advanceTimersByTimeAsync(1000);
     await Promise.resolve();
     
-    expect(output).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'a2' }), 
-      'json', 
-      'activity', 
-      true, 
-      undefined
+    expect(outputFormatted).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'activity', activity: expect.objectContaining({ id: 'a2' }) }),
+      'json',
+      expect.any(Object)
     );
 
     await waitPromise;
@@ -142,14 +133,13 @@ describe('waitCommand', () => {
     await jest.advanceTimersByTimeAsync(1000);
     await Promise.resolve();
 
-    expect(output).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'PLAN' }), 
-      'json', 
-      'activity', 
-      true, 
-      undefined
+    // All activities are seen on the first pass (isFirstPass=true) and not output
+    // Only the session terminal state output appears
+    expect(outputFormatted).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'session', session: expect.objectContaining({ state: 'COMPLETED' }) }),
+      'json',
+      expect.any(Object)
     );
-    expect(output).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'PROGRESS' }), 'json', 'activity');
 
     await waitPromise;
   });

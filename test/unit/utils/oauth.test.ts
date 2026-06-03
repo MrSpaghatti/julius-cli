@@ -1,4 +1,3 @@
-import { jest } from '@jest/globals';
 import { generatePKCE } from '../../../src/utils/oauth.js';
 
 describe('OAuth Utilities', () => {

@@ -12,15 +12,24 @@ jest.unstable_mockModule('../../../src/config/templates.js', () => ({
 }));
 
 // Mock sessions handler
-jest.unstable_mockModule('../../../src/commands/sessions.js', () => ({
-  handleCreateSession: jest.fn(),
-  createSessionsCommands: jest.fn(),
+jest.unstable_mockModule('../../../src/services/sessionService.js', () => ({
+  createSession: jest.fn(),
+}));
+
+
+jest.unstable_mockModule('../../../src/output/formatter.js', () => ({
+  formatOutput: jest.fn((data: any) => JSON.stringify(data)),
+  output: jest.fn(),
+  outputFormatted: jest.fn(),
+  createFormatterContext: jest.fn(() => ({ headerShown: false })),
 }));
 
 // Mock output formatter
 jest.unstable_mockModule('../../../src/output/formatter.js', () => ({
   formatOutput: jest.fn((data: any) => JSON.stringify(data)),
   output: jest.fn(),
+  outputFormatted: jest.fn(),
+  createFormatterContext: jest.fn(() => ({ headerShown: false })),
 }));
 
 // Mock getClient
@@ -31,14 +40,26 @@ jest.unstable_mockModule('../../../src/utils/client.js', () => ({
 // Mock fs
 jest.unstable_mockModule('fs', () => ({
   readFileSync: jest.fn(),
+  promises: {
+    readFile: jest.fn(),
+    writeFile: jest.fn(),
+    mkdir: jest.fn(),
+  },
+  constants: { O_RDONLY: 0, O_WRONLY: 1, O_RDWR: 2 },
   default: {
     readFileSync: jest.fn(),
+    promises: {
+      readFile: jest.fn(),
+      writeFile: jest.fn(),
+      mkdir: jest.fn(),
+    },
+    constants: { O_RDONLY: 0, O_WRONLY: 1, O_RDWR: 2 },
   },
 }));
 
 const { createTemplatesCommands } = await import('../../../src/commands/templates.js');
 const { templates } = await import('../../../src/config/templates.js');
-const { handleCreateSession } = await import('../../../src/commands/sessions.js');
+const { createSession } = await import('../../../src/services/sessionService.js');
 const { NotFoundError, InvalidArgsError } = await import('../../../src/utils/errors.js');
 
 describe('Templates Commands', () => {
@@ -84,7 +105,7 @@ describe('Templates Commands', () => {
   });
 
   describe('use', () => {
-    it('should fill template and call handleCreateSession', async () => {
+    it('should fill template and call createSession', async () => {
       const mockTemplate = {
         id: 'bugfix',
         name: 'Bug Fix',
@@ -95,13 +116,17 @@ describe('Templates Commands', () => {
         ],
       };
       (templates.get as jest.Mock).mockReturnValue(mockTemplate);
+      (createSession as any).mockResolvedValue({
+        client: {},
+        session: { id: '123', title: 'Bug Fix' },
+      });
 
       await program.parseAsync([
         'node', 'test', 'templates', 'use', 'bugfix',
         'bug=login', 'area=auth'
       ]);
 
-      expect(handleCreateSession).toHaveBeenCalledWith(
+      expect(createSession).toHaveBeenCalledWith(
         expect.objectContaining({
           prompt: 'Fix login in auth',
           title: 'Bug Fix',
@@ -119,10 +144,14 @@ describe('Templates Commands', () => {
           ],
         };
         (templates.get as jest.Mock).mockReturnValue(mockTemplate);
+        (createSession as any).mockResolvedValue({
+          client: {},
+          session: { id: '123', title: 'T1' },
+        });
   
         await program.parseAsync(['node', 'test', 'templates', 'use', 't1']);
   
-        expect(handleCreateSession).toHaveBeenCalledWith(
+        expect(createSession).toHaveBeenCalledWith(
           expect.objectContaining({
             prompt: 'Hello World',
           })

@@ -9,7 +9,7 @@ describe('fetchAllPages', () => {
     ];
 
     let callCount = 0;
-    const listFn = jest.fn(async (pageToken?: string, pageSize?: number) => {
+    const listFn = jest.fn(async () => {
       const page = pages[callCount];
       callCount++;
       return page;

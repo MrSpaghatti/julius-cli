@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import { Command } from 'commander';
 import { AuthError } from '../../../src/utils/errors.js';
+import { Output } from '../../../src/output/manager.js';
 
 // Mock config
 jest.unstable_mockModule('../../../src/config/index.js', () => ({
@@ -19,6 +20,7 @@ jest.unstable_mockModule('../../../src/config/index.js', () => ({
 // Mock output
 jest.unstable_mockModule('../../../src/output/formatter.js', () => ({
   output: jest.fn(),
+  outputFormatted: jest.fn(),
 }));
 
 // Mock API
@@ -44,7 +46,7 @@ jest.unstable_mockModule('../../../src/utils/client.js', () => ({
 
 const { createSourcesCommands } = await import('../../../src/commands/sources.js');
 const { config } = await import('../../../src/config/index.js');
-const { output } = await import('../../../src/output/formatter.js');
+const { output, outputFormatted } = await import('../../../src/output/formatter.js');
 const { fetchAllPages } = await import('../../../src/utils/pagination.js');
 const { getClient } = await import('../../../src/utils/client.js');
 
@@ -70,10 +72,9 @@ describe('Sources Commands', () => {
       await root.parseAsync(['node', 'test', 'sources', 'list']);
 
       expect(mockSourcesAPIInstance.list).toHaveBeenCalled();
-      expect(output).toHaveBeenCalledWith(
-        expect.objectContaining({ sources: mockResult.items }),
-        'json',
-        'source'
+      expect(outputFormatted).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'sources', sources: mockResult.items }),
+        'json'
       );
     });
 
@@ -85,10 +86,9 @@ describe('Sources Commands', () => {
       await root.parseAsync(['node', 'test', 'sources', 'list', '--all']);
 
       expect(fetchAllPages).toHaveBeenCalled();
-      expect(output).toHaveBeenCalledWith(
-        expect.objectContaining({ sources: mockResult.items }),
-        'json',
-        'source'
+      expect(outputFormatted).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'sources', sources: mockResult.items }),
+        'json'
       );
     });
 
@@ -105,11 +105,14 @@ describe('Sources Commands', () => {
       (mockSourcesAPIInstance.list as any).mockResolvedValue(mockResult);
 
       const root = new Command().addCommand(sourcesCmd);
-      const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      const spy = jest.spyOn(Output, 'info').mockImplementation(() => {});
       await root.parseAsync(['node', 'test', 'sources', 'list', '--format', 'pretty']);
 
       expect(spy).toHaveBeenCalledWith(expect.stringContaining('Connected Repositories'));
-      expect(output).toHaveBeenCalledWith(mockResult.items[0], 'pretty', 'source');
+      expect(outputFormatted).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'source', source: mockResult.items[0] }),
+        'pretty'
+      );
       spy.mockRestore();
     });
   });
@@ -123,7 +126,10 @@ describe('Sources Commands', () => {
       await root.parseAsync(['node', 'test', 'sources', 'get', 's1']);
 
       expect(mockSourcesAPIInstance.get).toHaveBeenCalledWith('s1');
-      expect(output).toHaveBeenCalledWith(mockSource, 'json', 'source');
+      expect(outputFormatted).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'source', source: mockSource }),
+        'json'
+      );
     });
   });
 });

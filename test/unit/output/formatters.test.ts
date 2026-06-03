@@ -118,39 +118,44 @@ describe('Output Formatters', () => {
   });
 
   describe('Output Dispatcher', () => {
-    const data = { id: '123', title: 'Test' } as any;
-
     it('should return empty string for quiet format', () => {
-      expect(formatOutput(data, 'quiet')).toBe('');
+      expect(formatOutput({ kind: 'session', session: { id: '123', title: 'Test' } as any }, 'quiet')).toBe('');
     });
 
     it('should return JSON for json format', () => {
-      expect(formatOutput(data, 'json')).toBe(formatJSON(data));
+      expect(formatOutput({ kind: 'session', session: { id: '123', title: 'Test' } as any }, 'json')).toContain('"id": "123"');
     });
 
-    it('should use pretty session formatter when type is session', () => {
-      const session = {
-        id: '123',
-        title: 'Test',
-        sourceContext: { source: 's' }
-      } as any;
-      const result = formatOutput(session, 'pretty', 'session');
+    it('should use pretty session formatter when kind is session', () => {
+      const result = formatOutput({
+        kind: 'session',
+        session: {
+          id: '123',
+          title: 'Test',
+          state: 'COMPLETED',
+          sourceContext: { source: 's' },
+          createTime: '2026-04-06T20:00:00Z'
+        } as any
+      }, 'pretty');
       expect(result).toContain('Session: Test');
     });
 
     it('should use table formatter when format is table', () => {
-      const session = {
-        id: '123',
-        title: 'Test',
-        sourceContext: { source: 'sources/github/owner/repo' }
-      } as any;
-      const result = formatOutput(session, 'table', 'session');
+      const result = formatOutput({
+        kind: 'sessions',
+        sessions: [{
+          id: '123',
+          title: 'Test',
+          sourceContext: { source: 'sources/github/owner/repo' }
+        } as any]
+      }, 'table');
       expect(result).toContain('123');
       expect(result).toContain('Test');
     });
 
-    it('should fall back to JSON if type is unknown', () => {
-      expect(formatOutput(data, 'pretty', 'unknown')).toBe(formatJSON(data));
+    it('should format a minimal session without sourceContext gracefully', () => {
+      const result = formatOutput({ kind: 'session', session: { id: '123' } as any }, 'pretty');
+      expect(result).toContain('Session: 123');
     });
   });
 });
