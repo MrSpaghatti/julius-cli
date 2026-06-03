@@ -1,24 +1,41 @@
 # Next Steps
 
-> Updated 2026-06-02 — after bug-fix pass across TUI and CLI.
+> Updated 2026-06-02 — scope reframed to daily-driver client for both humans and agents.
 
-## ✅ Fixed This Session
+## What Exists
 
-- **CreateSessionDialog render-phase setState** — Moved the `if (repo && phase === 'prompt')` auto-advance from render body into a `useEffect` where it belongs. No more React warnings.
-- **ActivityPanel error recovery** — Added `error` prop, wired `activitiesError` state through `App.tsx` `fetchActivities` catch block. Failed API calls now show a red-bordered error box with "Will retry automatically" instead of silently looking like "no activity".
-- **CLI `--help`/`--version` "Unexpected error"** — `CommanderError` from Commander's `exitOverride()` is now caught before the generic error handler in `src/index.ts`. Both flags exit 0 cleanly.
+### CLI (Agent Mode) — Feature Complete
+- `sessions create`, `list`, `get`, `send`, `approve`, `cancel`, `pull`, `diff`
+- `activities list` — full message/activity history
+- `wait` — block until completion with JSON output
+- `auth`, `config`, `sources`, `templates`, `listen`, `completion`
+- All output as JSON by default, proper exit codes
 
-## TUI Polish (Medium Priority)
+### TUI (Human Mode)
+- Session list with keyboard navigation (↑↓), state filtering (1-7, a)
+- Session details panel (title, repo, state, timestamps, outputs)
+- Activity stream with type-colored icons
+- **Chat panel** — conversation view with text input, Enter to open, Esc to exit
+- Session creation dialog with repo auto-detection
+- Error recovery in activity panel
+- No `"Unexpected error"` on `--help`/`--version`
 
-- **Session list pagination** — `fetchSessions` in `App.tsx` doesn't handle `nextPageToken`. Lists are capped at whatever the API default page size is.
-- **CreateSessionDialog error handling** — The dialog catches errors but only offers "Esc to close"; a retry button would be better.
-- **Keyboard shortcut reference** — The status bar doesn't show that `Enter` opens a session detail (detail is always shown, so this might just need a label).
-- **Format flag in TUI** — The `tui` command doesn't support `--format`. Should pass through to the output channel.
+## Gaps vs Website Features
 
-## Phase 3 — Production Readiness
+### TUI Filtering
+- State filtering exists (1-7 keys) but no repo or creator filter
+- No way to quickly search/filter sessions beyond state
 
-- **npm publish** — `package.json` has `"bin": {...}` pointing at `dist/index.js`. Needs: CI publish automation, `prepublishOnly` script for build+test, `files` field to ship only `dist/`.
-- **Shell completion at install time** — `src/commands/completion.ts` exists but there's no `"postinstall"` script in `package.json`.
-- **Batch session orchestration** — Multi-session create + wait in sequence/parallel for CI pipelines.
-- **CI/CD pipeline** — The `.github/` workflow exists but needs verification that it runs tests and publishes.
-- **README screenshot** — Worth adding a terminal screenshot/gif of the TUI once it's polished.
+### TUI Session Actions
+- Chat can send messages but no way to approve plans or cancel sessions
+- Need keyboard shortcuts for approve/cancel
+
+### CLI Minor Gaps
+- `sessions list` has `--state` and `--repo` but no `--creator` filter
+
+## Priority for Daily-Driver
+
+1. **TUI filter bar** — add repo filter input + active filter display in header
+2. **TUI approve/cancel** — keyboard actions for plan approval and session cancellation
+3. **TUI quick search** — `/` to search/filter sessions by repo, creator, or ID
+4. **CLI `--creator` filter** — pass through to API filter on `sessions list`

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
+import TextInput from 'ink-text-input';
 import { getClient } from '../utils/client.js';
 import { SessionsAPI } from '../api/sessions.js';
 import { ActivitiesAPI } from '../api/activities.js';
@@ -24,13 +25,24 @@ export function App(): React.ReactNode {
   const [filterState, setFilterState] = useState<string>('all');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [chatMode, setChatMode] = useState(false);
+  const [repoFilter, setRepoFilter] = useState('');
+  const [showRepoFilter, setShowRepoFilter] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const prevFilterStateRef = useRef(filterState);
 
   const fetchSessions = useCallback(async () => {
     try {
       const client = await getClient();
       const api = new SessionsAPI(client);
-      const filter = filterState !== 'all' ? `state="${filterState}"` : undefined;
+      const filters: string[] = [];
+      if (filterState !== 'all') {
+        filters.push(`state="${filterState}"`);
+      }
+      if (repoFilter) {
+        const parts = repoFilter.includes('/') ? repoFilter : `github/${repoFilter}`;
+        filters.push(`source = "sources/${parts}"`);
+      }
+      const filter = filters.length > 0 ? filters.join(' AND ') : undefined;
       const result = await api.list(30, undefined, filter);
       if (result?.items) {
         setSessions(result.items);
@@ -41,7 +53,7 @@ export function App(): React.ReactNode {
     } finally {
       setLoading(false);
     }
-  }, [filterState]);
+  }, [filterState, repoFilter]);
 
   const fetchActivities = useCallback(async (sessionId: string) => {
     setActivitiesLoading(true);
@@ -82,7 +94,14 @@ export function App(): React.ReactNode {
     if (showCreateDialog) return;
 
     if (chatMode) {
-      // Chat mode handles its own input (Escape, typing, Enter to send)
+      return;
+    }
+
+    if (showRepoFilter) {
+      if (key.escape) {
+        setShowRepoFilter(false);
+        setRepoFilter('');
+      }
       return;
     }
 
@@ -106,6 +125,27 @@ export function App(): React.ReactNode {
     }
     if (key.downArrow) {
       setSelectedIndex(Math.min(sessions.length - 1, selectedIndex + 1));
+      return;
+    }
+
+    if (input === 'r') {
+      setShowRepoFilter(true);
+      return;
+    }
+
+    if (input === 'p') {
+      const session = sessions[selectedIndex];
+      if (session && session.state === 'AWAITING_APPROVAL') {
+        handleApprove();
+      }
+      return;
+    }
+
+    if (input === 'x') {
+      const session = sessions[selectedIndex];
+      if (session && session.state !== 'COMPLETED' && session.state !== 'FAILED' && session.state !== 'CANCELLED') {
+        handleCancel();
+      }
       return;
     }
 
@@ -146,6 +186,38 @@ export function App(): React.ReactNode {
     setChatMode(false);
   }, []);
 
+  const handleApprove = useCallback(async () => {
+    const session = sessions[selectedIndex];
+    if (!session || session.state !== 'AWAITING_APPROVAL') return;
+    setActionLoading(true);
+    try {
+      const client = await getClient();
+      const api = new SessionsAPI(client);
+      await api.approvePlan(session.id);
+      await fetchSessions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to approve plan');
+    } finally {
+      setActionLoading(false);
+    }
+  }, [selectedIndex, sessions, fetchSessions]);
+
+  const handleCancel = useCallback(async () => {
+    const session = sessions[selectedIndex];
+    if (!session) return;
+    setActionLoading(true);
+    try {
+      const client = await getClient();
+      const api = new SessionsAPI(client);
+      await api.cancel(session.id);
+      await fetchSessions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel session');
+    } finally {
+      setActionLoading(false);
+    }
+  }, [selectedIndex, sessions, fetchSessions]);
+
   const selectedSession = sessions[selectedIndex];
 
   return (
@@ -170,6 +242,34 @@ export function App(): React.ReactNode {
           <Text bold color={filterState === 'all' ? 'green' : 'white'}>{filterState}</Text>
         </Box>
       </Box>
+
+      {showRepoFilter && (
+        <Box paddingX={1} paddingY={0}>
+          <Text bold color="cyan">Repo filter: </Text>
+          <Box flexGrow={1}>
+            <TextInput
+              value={repoFilter}
+              onChange={setRepoFilter}
+              onSubmit={(value) => {
+                setRepoFilter(value);
+                setShowRepoFilter(false);
+                setSelectedIndex(0);
+                fetchSessions();
+              }}
+              placeholder="owner/repo (Enter to apply, Esc to cancel)"
+            />
+          </Box>
+        </Box>
+      )}
+
+      {repoFilter && !showRepoFilter && (
+        <Box paddingX={1}>
+          <Text color="cyan">Filter: repo={repoFilter}</Text>
+          <Box marginLeft={1}>
+            <Text color="gray" dimColor>(r to change)</Text>
+          </Box>
+        </Box>
+      )}
 
       <Box flexGrow={1} minHeight={15}>
         <Box width="45%" borderStyle="single" flexDirection="column">
@@ -285,6 +385,12 @@ export function App(): React.ReactNode {
             <Text color="gray">↑↓ Navigate</Text>
             <ColorDivider />
             <Text color="gray">Enter Chat</Text>
+            <ColorDivider />
+            <Text color="gray">r Filter Repo</Text>
+            <ColorDivider />
+            <Text color="gray">p Approve</Text>
+            <ColorDivider />
+            <Text color="gray">x Cancel</Text>
             <ColorDivider />
             <Text color="gray">c Create</Text>
             <ColorDivider />
