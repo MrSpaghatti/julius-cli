@@ -9,9 +9,33 @@ import { createTemplatesCommands } from './commands/templates.js';
 import { createInteractiveCommand } from './commands/interactive.js';
 import { createListenCommand } from './commands/listen.js';
 import { createCompletionCommand } from './commands/completion.js';
+import { createTuiCommand } from './commands/tui.js';
+import { createCommandRegistry, createInteractiveCommandExecutor } from './cli/parser.js';
 import { handleError } from './utils/errors.js';
 
 export const cli = new Command();
+
+const commandsBeforeInteractive = [
+  createAuthCommands(),
+  createSourcesCommands(),
+  createSessionsCommands(),
+  createActivitiesCommands(),
+  createWaitCommand(),
+  createConfigCommands(),
+  createTemplatesCommands(),
+];
+
+const commandsAfterInteractive = [
+  createListenCommand(),
+  createCompletionCommand(),
+  createTuiCommand(),
+];
+
+const interactiveCommandNames = createCommandRegistry([
+  ...commandsBeforeInteractive.map((command) => command.name()),
+  'interactive',
+  ...commandsAfterInteractive.map((command) => command.name()),
+]);
 
 cli
   .name('julius-cli')
@@ -23,16 +47,18 @@ cli.option('--verbose', 'Enable verbose logging');
 cli.option('--no-color', 'Disable colored output');
 
 // Add command groups
-cli.addCommand(createAuthCommands());
-cli.addCommand(createSourcesCommands());
-cli.addCommand(createSessionsCommands());
-cli.addCommand(createActivitiesCommands());
-cli.addCommand(createWaitCommand());
-cli.addCommand(createConfigCommands());
-cli.addCommand(createTemplatesCommands());
-cli.addCommand(createInteractiveCommand());
-cli.addCommand(createListenCommand());
-cli.addCommand(createCompletionCommand());
+for (const command of commandsBeforeInteractive) {
+  cli.addCommand(command);
+}
+
+cli.addCommand(createInteractiveCommand({
+  commands: interactiveCommandNames,
+  execute: createInteractiveCommandExecutor(cli),
+}));
+
+for (const command of commandsAfterInteractive) {
+  cli.addCommand(command);
+}
 
 // Error handling
 cli.exitOverride();

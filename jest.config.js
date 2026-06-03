@@ -10,10 +10,11 @@ export default {
       'ts-jest',
       {
         useESM: true,
+        tsconfig: 'tsconfig.test.json',
       },
     ],
   },
-  testMatch: ['**/test/**/*.test.ts'],
+  testMatch: ['**/test/**/*.test.{ts,tsx}'],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/index.ts',
