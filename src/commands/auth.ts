@@ -2,9 +2,8 @@ import { Command } from 'commander';
 import { config } from '../config/index.js';
 import { output } from '../output/formatter.js';
 import { AuthError, CLIError, ExitCode } from '../utils/errors.js';
-import { JulesAPIClient } from '../api/client.js';
 import { SourcesAPI } from '../api/sources.js';
-import type { OutputFormat } from '../api/types.js';
+import type { OutputFormat } from '../cli/types.js';
 import { getClient } from '../utils/client.js';
 import { runBrowserOAuthFlow, runDeviceCodeFlow } from '../utils/oauth.js';
 
@@ -103,36 +102,35 @@ export function createAuthCommands(): Command {
       const authMethod = config.getAuthMethod();
       const endpoint = config.getApiEndpoint();
 
-      let client;
-      let authenticated = false;
-      let error = null;
-      let methodInfo: any = { method: authMethod };
+        let client;
+        let authenticated = false;
+        let error = null;
+        let methodInfo: { method: string; expiresAt?: string } = { method: authMethod };
 
-      try {
-        client = await getClient();
-        const api = new SourcesAPI(client);
-        await api.list(1); // Fetch just 1 item to verify authentication
-        authenticated = true;
-      } catch (err: any) {
-        error = err.message;
-      }
-
-      if (authMethod === 'oauth') {
-        const tokens = await config.getOAuthTokens();
-        if (tokens) {
-          methodInfo.expiresAt = new Date(tokens.expiresAt).toISOString();
+        try {
+          client = await getClient();
+          const api = new SourcesAPI(client);
+          await api.list(1); // Fetch just 1 item to verify authentication
+          authenticated = true;
+        } catch (err) {
+          error = err instanceof Error ? err.message : String(err);
         }
-      }
 
-      output(
-        {
-          authenticated,
-          method: authMethod,
-          endpoint,
-          error,
-          ...methodInfo,
-          note: authenticated ? 'Credentials are valid.' : 'Credentials are present but invalid or API is unreachable.',
-        },
+       if (authMethod === 'oauth') {
+         const tokens = await config.getOAuthTokens();
+         if (tokens) {
+           methodInfo = { ...methodInfo, expiresAt: new Date(tokens.expiresAt).toISOString() };
+         }
+       }
+
+       output(
+         {
+           authenticated,
+           endpoint,
+           error,
+           ...methodInfo,
+           note: authenticated ? 'Credentials are valid.' : 'Credentials are present but invalid or API is unreachable.',
+         },
         options.format
       );
     });

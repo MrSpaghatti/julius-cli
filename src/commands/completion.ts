@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
+import { Output } from '../output/manager.js';
 
 const BASH_COMPLETION = `
 _julius_cli_completion() {
@@ -7,23 +8,23 @@ _julius_cli_completion() {
     COMPREPLY=()
     cur="\${COMP_WORDS[COMP_CWORD]}"
     prev="\${COMP_WORDS[COMP_CWORD-1]}"
-    opts="\$(julius-cli --help | grep -E '^  [a-z]' | awk '{print \$1}')"
+    opts="$(julius-cli --help | grep -E '^  [a-z]' | awk '{print $1}')"
 
     if [[ \${cur} == -* ]] ; then
-        COMPREPLY=( \$(compgen -W "\$(julius-cli \${COMP_WORDS[1]} --help | grep -E '^  -' | awk '{print \$1, \$2}' | tr -d ',')" -- \${cur}) )
+            COMPREPLY=( $(compgen -W "$(julius-cli \${COMP_WORDS[1]} --help | grep -E '^  -' | awk '{print $1, $2}' | tr -d ',')" -- \${cur}) )
         return 0
     fi
 
     case "\${prev}" in
         auth|sources|sessions|activities|wait|config|templates|interactive|listen)
-            COMPREPLY=( \$(compgen -W "\$(julius-cli \${prev} --help | grep -E '^  [a-z]' | awk '{print \$1}')" -- \${cur}) )
+            COMPREPLY=( $(compgen -W "$(julius-cli \${prev} --help | grep -E '^  [a-z]' | awk '{print $1}')" -- \${cur}) )
             return 0
             ;;
         *)
             ;;
     esac
 
-    COMPREPLY=( \$(compgen -W "\${opts}" -- \${cur}) )
+    COMPREPLY=( $(compgen -W "\${opts}" -- \${cur}) )
     return 0
 }
 complete -F _julius_cli_completion julius-cli
@@ -82,11 +83,11 @@ export function createCompletionCommand(): Command {
     .argument('[shell]', 'Shell type (bash, zsh)', 'bash')
     .action((shell) => {
       if (shell === 'bash') {
-        console.log(BASH_COMPLETION);
+        Output.write(BASH_COMPLETION);
       } else if (shell === 'zsh') {
-        console.log(ZSH_COMPLETION);
+        Output.write(ZSH_COMPLETION);
       } else {
-        console.error(chalk.red(`Unsupported shell: \${shell}. Supported: bash, zsh`));
+        Output.error(chalk.red(`Unsupported shell: \${shell}. Supported: bash, zsh`));
         process.exit(1);
       }
     });

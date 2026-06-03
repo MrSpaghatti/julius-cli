@@ -1,6 +1,6 @@
 import Conf from 'conf';
 import { setPassword, getPassword, deletePassword } from 'cross-keychain';
-import type { CLIConfig } from '../api/types.js';
+import type { CLIConfig } from './types.js';
 import { CLIError, ExitCode } from '../utils/errors.js';
 import { OAuthTokens } from '../utils/oauth.js';
 

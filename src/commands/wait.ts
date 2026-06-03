@@ -1,23 +1,25 @@
 import { JulesAPIClient } from '../api/client.js';
 import { SessionsAPI } from '../api/sessions.js';
 import { ActivitiesAPI } from '../api/activities.js';
-import { Session, SessionState, OutputFormat, Activity } from '../api/types.js';
-import { output } from '../output/formatter.js';
+import { Session, SessionState, Activity } from '../api/types.js';
+import type { OutputFormat } from '../cli/types.js';
+import { outputFormatted, type FormatterContext } from '../output/formatter.js';
 import { CLIError, ExitCode } from '../utils/errors.js';
 import { sleep } from '../utils/polling.js';
 import ora from 'ora';
 
 export interface WaitCommandOptions {
   sessionId: string;
-  timeout?: number; // seconds, default 600 (10 minutes)
-  interval?: number; // seconds, default 5
-  state?: SessionState; // wait for specific state, default COMPLETED|FAILED|CANCELLED
+  timeout?: number;
+  interval?: number;
+  state?: SessionState;
   format?: OutputFormat;
   verbose?: boolean;
   follow?: boolean;
   activityTypes?: string[];
   noSpinner?: boolean;
   prefix?: string;
+  activityFormatterContext?: FormatterContext;
 }
 
 const TERMINAL_STATES: SessionState[] = ['COMPLETED', 'FAILED', 'CANCELLED'];
@@ -134,7 +136,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
           newActivities.sort((a, b) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime());
 
           for (const activity of newActivities) {
-            output(activity, format, 'activity', true, prefix);
+            outputFormatted({ kind: 'activity', activity }, format, { prefix });
           }
         } catch (actError) {
           if (verbose) {
@@ -155,7 +157,7 @@ export async function waitCommand(client: JulesAPIClient, options: WaitCommandOp
         // Output final session details if not in quiet mode
         if (format !== 'quiet') {
           if (format === 'pretty') console.log(prefix ? `${prefix}\nFinal Session State:` : '\nFinal Session State:');
-          output(session, format, 'session', false, prefix);
+          outputFormatted({ kind: 'session', session }, format, { prefix });
         }
         return;
       }

@@ -1,5 +1,6 @@
 import { execFileSync, spawnSync } from 'child_process';
 import { InvalidArgsError } from './errors.js';
+import { Output } from '../output/manager.js';
 
 export interface RepoInfo {
   provider: string;
@@ -65,7 +66,7 @@ export function pullSessionChanges(repo: string, branchName: string): void {
   try {
     // Determine remote if possible, default to origin
     const remote = 'origin';
-    console.log(`Fetching branch ${branchName} from ${repo} (remote: ${remote})...`);
+    Output.info(`Fetching branch ${branchName} from ${repo} (remote: ${remote})...`);
 
     // Check if the branch exists locally using exact matching
     let branchExists = false;
@@ -77,7 +78,7 @@ export function pullSessionChanges(repo: string, branchName: string): void {
     }
 
     if (branchExists) {
-      console.log(
+      Output.info(
         `Branch ${branchName} already exists locally. Checking it out...`
       );
       gitProvider.execInherit(['checkout', branchName]);
@@ -104,7 +105,7 @@ export function pullSessionChanges(repo: string, branchName: string): void {
       gitProvider.execInherit(['checkout', branchName]);
     }
 
-    console.log(`Successfully checked out ${branchName}`);
+    Output.info(`Successfully checked out ${branchName}`);
   } catch (error) {
     throw new Error(`Failed to pull changes: ${(error as Error).message}`);
   }

@@ -2,7 +2,8 @@ import { Command } from 'commander';
 import { config } from '../config/index.js';
 import { output } from '../output/formatter.js';
 import { InvalidArgsError } from '../utils/errors.js';
-import type { OutputFormat, CLIConfig } from '../api/types.js';
+import type { OutputFormat } from '../cli/types.js';
+import type { CLIConfig } from '../config/types.js';
 
 export function createConfigCommands(): Command {
   const configCmd = new Command('config').description('Manage CLI configuration');

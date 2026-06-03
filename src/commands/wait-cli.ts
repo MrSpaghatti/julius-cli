@@ -2,9 +2,12 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { config } from '../config/index.js';
 import { waitCommand } from './wait.js';
-import { handleError, CLIError, ExitCode } from '../utils/errors.js';
-import type { SessionState, OutputFormat } from '../api/types.js';
+import { CLIError, ExitCode } from '../utils/errors.js';
+import type { SessionState } from '../api/types.js';
+import type { OutputFormat } from '../cli/types.js';
 import { getClient } from '../utils/client.js';
+import { createFormatterContext } from '../output/formatter.js';
+import { Output } from '../output/manager.js';
 
 export function createWaitCommand(): Command {
   const wait = new Command('wait');
@@ -73,27 +76,28 @@ export function createWaitCommand(): Command {
           activityTypes: options.activityType,
           noSpinner: sessionIds.length > 1,
           prefix,
+          activityFormatterContext: createFormatterContext(),
         });
       });
 
       const results = await Promise.allSettled(waitPromises);
       
-      const failed = results.filter(r => r.status === 'rejected');
-      if (failed.length > 0) {
-        if (options.format === 'pretty') {
-          console.error(chalk.red(`\n${failed.length} session(s) failed or timed out:`));
-          failed.forEach((r, i) => {
-            const error = (r as PromiseRejectedResult).reason;
-            console.error(chalk.red(`  - ${error.message || error}`));
-          });
-        }
+       const failed = results.filter(r => r.status === 'rejected');
+       if (failed.length > 0) {
+         if (options.format === 'pretty') {
+            Output.error(chalk.red(`\n${failed.length} session(s) failed or timed out:`));
+           failed.forEach(r => {
+             const error = (r as PromiseRejectedResult).reason;
+              Output.error(chalk.red(`  - ${error.message || error}`));
+           });
+         }
         
         // Exit with non-zero if any failed
         process.exit(ExitCode.GENERAL_ERROR);
       }
 
       if (options.format === 'pretty' && sessionIds.length > 1) {
-        console.log(chalk.green(`\nAll ${sessionIds.length} sessions reached target state.`));
+        Output.info(chalk.green(`\nAll ${sessionIds.length} sessions reached target state.`));
       }
     });
 

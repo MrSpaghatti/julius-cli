@@ -1,5 +1,7 @@
 // Error types and exit codes
 
+import { Output } from '../output/manager.js';
+
 export enum ExitCode {
   SUCCESS = 0,
   GENERAL_ERROR = 1,
@@ -70,18 +72,18 @@ export class NetworkError extends CLIError {
 
 export function handleError(error: unknown): ExitCode {
   if (error instanceof CLIError) {
-    console.error(`Error: ${error.message}`);
+    Output.error(`Error: ${error.message}`);
     if (error.hint) {
-      console.error(`Hint: ${error.hint}`);
+      Output.error(`Hint: ${error.hint}`);
     }
     return error.exitCode;
   }
 
   if (error instanceof Error) {
-    console.error(`Unexpected error: ${error.message}`);
+    Output.error(`Unexpected error: ${error.message}`);
     return ExitCode.GENERAL_ERROR;
   }
 
-  console.error('An unknown error occurred');
+  Output.error('An unknown error occurred');
   return ExitCode.GENERAL_ERROR;
 }

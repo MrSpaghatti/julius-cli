@@ -152,9 +152,9 @@ export function createListenCommand(): Command {
                 console.log(chalk.blue(`\n[${new Date().toLocaleTimeString()}] Webhook received:`));
 
                 if (data.session) {
-                  output(data.session, 'pretty', 'session');
+                  output(data.session, 'pretty');
                 } else if (data.activity) {
-                  output(data.activity, 'pretty', 'activity');
+                  output(data.activity, 'pretty');
                 } else {
                   console.log(JSON.stringify(data, null, 2));
                 }

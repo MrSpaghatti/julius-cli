@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { OAuth2Client } from 'google-auth-library';
+import { Output } from '../output/manager.js';
 
 export interface OAuthTokens {
   accessToken: string;
@@ -23,8 +24,11 @@ export function generatePKCE() {
  * Open a URL in the default browser
  */
 async function openBrowser(url: string): Promise<void> {
-  const start =
-    process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
+  const OPEN_COMMANDS: Record<string, string> = {
+    darwin: 'open',
+    win32: 'start',
+  };
+  const start = OPEN_COMMANDS[process.platform] ?? 'xdg-open';
   spawn(start, [url], { shell: true }).unref();
 }
 
@@ -117,7 +121,7 @@ export async function runBrowserOAuthFlow(
         code_challenge_method: 'S256' as any,
       });
 
-      console.log('Opening browser for authentication...');
+  Output.info('Opening browser for authentication...');
       openBrowser(authorizeUrl);
     });
   });
@@ -143,8 +147,8 @@ export async function runDeviceCodeFlow(clientId: string, scopes: string[]): Pro
 
   const { device_code, user_code, verification_url, interval, expires_in } = data;
 
-  console.log(`\n1. Visit: ${verification_url}`);
-  console.log(`2. Enter code: ${user_code}\n`);
+  Output.info(`\n1. Visit: ${verification_url}`);
+  Output.info(`2. Enter code: ${user_code}\n`);
 
   const pollInterval = (interval || 5) * 1000;
   const stopTime = Date.now() + expires_in * 1000;

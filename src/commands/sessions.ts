@@ -2,7 +2,8 @@ import { Command } from 'commander';
 import ora from 'ora';
 import { config } from '../config/index.js';
 import { SessionsAPI } from '../api/sessions.js';
-import { output } from '../output/formatter.js';
+import { output, outputFormatted, createFormatterContext } from '../output/formatter.js';
+import { Output } from '../output/manager.js';
 import { InvalidArgsError } from '../utils/errors.js';
 import {
   inferRepo,
@@ -11,85 +12,29 @@ import {
 } from '../utils/git.js';
 import { fetchAllPages } from '../utils/pagination.js';
 import { getClient } from '../utils/client.js';
+import { createSession } from '../services/sessionService.js';
 import { waitCommand } from './wait.js';
-import type { Session, OutputFormat } from '../api/types.js';
-
-export interface CreateSessionParams {
-  repo?: string;
-  prompt: string;
-  title?: string;
-  branch?: string;
-  autoPr?: boolean;
-  requireApproval?: boolean;
-  wait?: boolean;
-  follow?: boolean;
-  format: OutputFormat;
-}
+import type { OutputFormat } from '../cli/types.js';
+import type { CreateSessionParams } from '../services/sessionService.js';
 
 export async function handleCreateSession(options: CreateSessionParams) {
-  const client = await getClient();
-  const api = new SessionsAPI(client);
-
-  if (options.prompt.length > 10000) {
-    throw new InvalidArgsError('Prompt is too long (max 10,000 characters)');
-  }
-
-  let provider = 'github';
-  let repo = '';
-
-  if (options.repo) {
-    const parts = options.repo.split('/');
-    if (parts.length === 3) {
-      provider = parts[0];
-      repo = `${parts[1]}/${parts[2]}`;
-    } else if (parts.length === 2) {
-      repo = options.repo;
-    } else {
-      throw new InvalidArgsError('Repository must be in format: [provider/]owner/repo');
-    }
-  } else {
-    const inferred = inferRepo();
-    provider = inferred.provider;
-    repo = inferred.repo;
-  }
-
-  const sourceId = `${provider}/${repo}`;
-  const source = `sources/${sourceId}`;
-
   let spinner;
   if (options.format === 'pretty' && !options.wait && !options.follow) {
-    spinner = ora(`Creating session for ${sourceId}...`).start();
+    spinner = ora('Creating session...').start();
   }
 
-  const sourceContext: Session['sourceContext'] = { source };
-  if (options.branch) {
-    if (provider === 'gitlab') {
-      sourceContext.gitlabRepoContext = { startingBranch: options.branch };
-    } else if (provider === 'bitbucket') {
-      sourceContext.bitbucketRepoContext = { startingBranch: options.branch };
-    } else {
-      sourceContext.githubRepoContext = { startingBranch: options.branch };
-    }
-  }
-
-  const session = await api.create({
-    prompt: options.prompt,
-    title: options.title,
-    sourceContext,
-    automationMode: options.autoPr ? 'AUTO_CREATE_PR' : 'NONE',
-    requirePlanApproval: options.requireApproval || false,
-  });
+  const { client, session } = await createSession(options);
 
   if (spinner) {
     spinner.succeed(`Session created: ${session.id}`);
-    console.log('');
+    Output.info('');
   }
 
-  output(session, options.format, 'session');
+  outputFormatted({ kind: 'session', session }, options.format);
 
   if (options.wait || options.follow) {
     if (options.format === 'pretty') {
-      console.log('\n--- Waiting for Session Completion ---\n');
+      Output.info('\n--- Waiting for Session Completion ---\n');
     }
     await waitCommand(client, {
       sessionId: session.id,
@@ -97,6 +42,7 @@ export async function handleCreateSession(options: CreateSessionParams) {
       follow: true, // both --wait and --follow should follow
       interval: config.getRequired('pollInterval') / 1000,
       timeout: (config.getRequired('maxPollAttempts') * config.getRequired('pollInterval')) / 1000,
+      activityFormatterContext: createFormatterContext(),
     });
   }
 }
@@ -159,30 +105,38 @@ export function createSessionsCommands(): Command {
           throw new InvalidArgsError('Page size must be between 1 and 100');
         }
 
-        const filters: string[] = [];
-        if (options.repo) {
-          if (options.repo.includes('/')) {
-            const parts = options.repo.split('/');
-            if (parts.length === 3) {
-              // provider/owner/repo
-              filters.push(`source = "sources/${options.repo}"`);
-            } else if (parts.length === 2) {
-              // owner/repo
-              let provider = 'github';
-              try {
-                const inferred = inferRepo();
-                if (inferred.repo === options.repo) {
-                  provider = inferred.provider;
-                }
-              } catch {
-                // Ignore
-              }
-              filters.push(`source = "sources/${provider}/${options.repo}"`);
-            }
-          } else {
-             filters.push(`source = "sources/${options.repo}"`);
+        const buildRepoFilter = (repo: string): string | undefined => {
+          if (!repo.includes('/')) {
+            return `source = "sources/${repo}"`;
           }
-        }
+        
+          const parts = repo.split('/');
+          if (parts.length === 3) {
+            return `source = "sources/${repo}"`;
+          }
+        
+          if (parts.length !== 2) {
+            return undefined;
+          }
+        
+          let provider = 'github';
+          try {
+            const inferred = inferRepo();
+            if (inferred.repo === repo) {
+              provider = inferred.provider;
+            }
+          } catch {
+            // keep default provider
+          }
+        
+          return `source = "sources/${provider}/${repo}"`;
+        };
+        
+        const filters: string[] = [];
+        const repoFilter = options.repo ? buildRepoFilter(options.repo) : undefined;
+                if (repoFilter) {
+                  filters.push(repoFilter);
+                }
         if (options.state && options.state.length > 0) {
           const stateFilters = options.state
             .map((s) => `state = "${s}"`)
@@ -215,25 +169,25 @@ export function createSessionsCommands(): Command {
         const items = result.items;
 
         if (options.format === 'pretty') {
-          console.log('Sessions:\n');
+          Output.info('Sessions:\n');
           for (const session of items) {
-            output(session, 'pretty', 'session');
+            outputFormatted({ kind: 'session', session }, 'pretty');
           }
-          console.log(`Total: ${items.length} sessions`);
+          Output.info(`Total: ${items.length} sessions`);
           if (!shouldFetchAll && result.nextPageToken) {
-            console.log(
+            Output.info(
               `\nNext page: julius-cli sessions list --page-token ${result.nextPageToken}`
             );
           }
         } else {
-          output(
+          outputFormatted(
             {
+              kind: 'sessions',
               sessions: items,
               nextPageToken: result.nextPageToken,
               totalSize: result.totalSize,
             },
-            options.format,
-            'session'
+            options.format
           );
         }
       }
@@ -254,7 +208,7 @@ export function createSessionsCommands(): Command {
 
       const session = await api.get(sessionId);
 
-      output(session, options.format, 'session');
+      outputFormatted({ kind: 'session', session }, options.format);
     });
 
   sessions

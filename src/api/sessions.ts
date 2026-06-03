@@ -4,16 +4,12 @@ import type {
   PaginatedResponse,
   AutomationMode,
   WebhookConfig,
+  SessionSourceContext,
 } from './types.js';
 
 export interface CreateSessionParams {
   prompt: string;
-  sourceContext: {
-    source: string;
-    githubRepoContext?: {
-      startingBranch: string;
-    };
-  };
+  sourceContext: SessionSourceContext;
   automationMode?: AutomationMode;
   requirePlanApproval?: boolean;
   title?: string;

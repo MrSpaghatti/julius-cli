@@ -1,11 +1,12 @@
 import { Command } from 'commander';
 import { config } from '../config/index.js';
 import { ActivitiesAPI } from '../api/activities.js';
-import { output } from '../output/formatter.js';
+import { outputFormatted } from '../output/formatter.js';
 import { InvalidArgsError } from '../utils/errors.js';
 import { fetchAllPages } from '../utils/pagination.js';
 import { getClient } from '../utils/client.js';
-import type { OutputFormat } from '../api/types.js';
+import type { OutputFormat } from '../cli/types.js';
+import { Output } from '../output/manager.js';
 
 export function createActivitiesCommands(): Command {
   const activities = new Command('activities').description('View session activities');
@@ -66,26 +67,26 @@ export function createActivitiesCommands(): Command {
       const items = result.items;
 
       if (options.format === 'pretty') {
-        console.log(`Activities for session ${sessionId}:\n`);
+        Output.info(`Activities for session ${sessionId}:\n`);
         for (const activity of items) {
-          output(activity, 'pretty', 'activity');
+          outputFormatted({ kind: 'activity', activity }, 'pretty');
         }
-        console.log(`Total: ${items.length} activities`);
+        Output.info(`Total: ${items.length} activities`);
         if (!shouldFetchAll && result.nextPageToken) {
-          console.log(
+          Output.info(
             `\nNext page: julius-cli activities list ${sessionId} --page-token ${result.nextPageToken}`
           );
         }
       } else {
-        output(
+        outputFormatted(
           {
+            kind: 'activities',
             sessionId,
             activities: items,
             nextPageToken: result.nextPageToken,
             totalSize: result.totalSize,
           },
-          options.format,
-          'activity'
+          options.format
         );
       }
     });
@@ -106,7 +107,7 @@ export function createActivitiesCommands(): Command {
 
       const activity = await api.get(sessionId, activityId);
 
-      output(activity, options.format, 'activity');
+      outputFormatted({ kind: 'activity', activity }, options.format);
     });
 
   return activities;

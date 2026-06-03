@@ -2,11 +2,19 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
+import ora from 'ora';
 import { templates } from '../config/templates.js';
-import { formatOutput } from '../output/formatter.js';
-import { handleCreateSession } from './sessions.js';
+import { config } from '../config/index.js';
+import {
+  formatOutput,
+  outputFormatted,
+  createFormatterContext,
+} from '../output/formatter.js';
+import { createSession } from '../services/sessionService.js';
 import { NotFoundError, InvalidArgsError } from '../utils/errors.js';
-import type { Template } from '../api/types.js';
+import { waitCommand } from './wait.js';
+import type { Template } from '../templates/types.js';
+import { Output } from '../output/manager.js';
 
 function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -22,7 +30,9 @@ export function createTemplatesCommands(): Command {
     .option('--format <format>', 'Output format (json, pretty, table, quiet)', 'pretty')
     .action(async (options) => {
       const allTemplates = templates.getAll();
-      console.log(formatOutput(allTemplates, options.format, 'template'));
+      Output.log(
+        formatOutput({ kind: 'templates', templates: allTemplates }, options.format)
+      );
     });
 
   templatesCmd
@@ -34,7 +44,7 @@ export function createTemplatesCommands(): Command {
       if (!template) {
         throw new NotFoundError('Template', id);
       }
-      console.log(formatOutput(template, options.format, 'template'));
+      Output.log(formatOutput({ kind: 'template', template }, options.format));
     });
 
   templatesCmd
@@ -49,9 +59,9 @@ export function createTemplatesCommands(): Command {
         
         const name = await rl.question('Template Name: ');
         const description = await rl.question('Description: ');
-        console.log('Enter prompt (use {{var}} for variables). Press Enter twice to finish:');
+        Output.info('Enter prompt (use {{var}} for variables). Press Enter twice to finish:');
         
-        let promptLines: string[] = [];
+        const promptLines: string[] = [];
         while (true) {
           const line = await rl.question('');
           if (line === '' && promptLines.length > 0 && promptLines[promptLines.length - 1] === '') {
@@ -76,7 +86,7 @@ export function createTemplatesCommands(): Command {
         };
         
         templates.set(template);
-        console.log(chalk.green(`\nTemplate '${id}' created successfully.`));
+        Output.info(chalk.green(`\nTemplate '${id}' created successfully.`));
       } finally {
         rl.close();
       }
@@ -106,7 +116,7 @@ export function createTemplatesCommands(): Command {
       }
       
       templates.set(template);
-      console.log(chalk.green(`Template '${id}' updated successfully.`));
+      Output.info(chalk.green(`Template '${id}' updated successfully.`));
     });
 
   templatesCmd
@@ -115,7 +125,7 @@ export function createTemplatesCommands(): Command {
     .action(async (id) => {
       if (!templates.get(id)) throw new NotFoundError('Template', id);
       templates.delete(id);
-      console.log(chalk.green(`Template '${id}' deleted successfully.`));
+      Output.info(chalk.green(`Template '${id}' deleted successfully.`));
     });
 
   templatesCmd
@@ -132,13 +142,13 @@ export function createTemplatesCommands(): Command {
         let count = 0;
         for (const t of imported) {
           if (!t.id || !t.prompt) {
-            console.log(chalk.yellow(`Skipping invalid template (missing id or prompt): ${t.id || 'unknown'}`));
+          Output.warn(chalk.yellow(`Skipping invalid template (missing id or prompt): ${t.id || 'unknown'}`));
             continue;
           }
           templates.set(t);
           count++;
         }
-        console.log(chalk.green(`Successfully imported ${count} templates from ${file}`));
+        Output.info(chalk.green(`Successfully imported ${count} templates from ${file}`));
       } catch (err: any) {
         throw new Error(`Failed to import templates: ${err.message}`);
       }
@@ -187,14 +197,40 @@ export function createTemplatesCommands(): Command {
       prompt = prompt.replace(/{{[^{}]+}}/g, '');
 
       if (options.format === 'pretty') {
-        console.log(chalk.blue(`Using template: ${template.name}`));
+        Output.info(chalk.blue(`Using template: ${template.name}`));
       }
 
-      await handleCreateSession({
+      let spinner;
+      if (options.format === 'pretty' && !options.wait && !options.follow) {
+        spinner = ora('Creating session...').start();
+      }
+
+      const { client, session } = await createSession({
         ...options,
         prompt,
         title: options.title || template.name,
       });
+
+      if (spinner) {
+        spinner.succeed(`Session created: ${session.id}`);
+        Output.info('');
+      }
+
+      outputFormatted({ kind: 'session', session }, options.format);
+
+      if (options.wait || options.follow) {
+        if (options.format === 'pretty') {
+          Output.info('\n--- Waiting for Session Completion ---\n');
+        }
+        await waitCommand(client, {
+          sessionId: session.id,
+          format: options.format,
+          follow: true,
+          interval: config.getRequired('pollInterval') / 1000,
+          timeout: (config.getRequired('maxPollAttempts') * config.getRequired('pollInterval')) / 1000,
+          activityFormatterContext: createFormatterContext(),
+        });
+      }
     });
 
   return templatesCmd;

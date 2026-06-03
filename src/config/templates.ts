@@ -1,5 +1,5 @@
 import Conf from 'conf';
-import type { Template } from '../api/types.js';
+import type { Template } from '../templates/types.js';
 
 interface TemplatesStore {
   templates: Record<string, Template>;

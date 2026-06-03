@@ -2,11 +2,12 @@ import { Command } from 'commander';
 import ora from 'ora';
 import { config } from '../config/index.js';
 import { SourcesAPI } from '../api/sources.js';
-import { output } from '../output/formatter.js';
+import { outputFormatted } from '../output/formatter.js';
+import { Output } from '../output/manager.js';
 import { InvalidArgsError } from '../utils/errors.js';
 import { fetchAllPages } from '../utils/pagination.js';
 import { getClient } from '../utils/client.js';
-import type { OutputFormat } from '../api/types.js';
+import type { OutputFormat } from '../cli/types.js';
 
 export function createSourcesCommands(): Command {
   const sources = new Command('sources').description('Manage GitHub repositories');
@@ -49,26 +50,26 @@ export function createSourcesCommands(): Command {
       }
 
       if (options.format === 'pretty') {
-        console.log('Connected Repositories:\n');
+        Output.info('Connected Repositories:\n');
         for (const source of result.items) {
-          output(source, 'pretty', 'source');
+          outputFormatted({ kind: 'source', source }, 'pretty');
         }
         if (result.totalSize) {
-          console.log(`Total: ${result.totalSize} repositories`);
+          Output.info(`Total: ${result.totalSize} repositories`);
         }
         if (!options.all && result.nextPageToken) {
-          console.log(`\nNext page: julius-cli sources list --page-token ${result.nextPageToken}`);
+          Output.info(`\nNext page: julius-cli sources list --page-token ${result.nextPageToken}`);
         }
       } else {
-        output(
-          {
-            sources: result.items,
-            nextPageToken: result.nextPageToken,
-            totalSize: result.totalSize,
-          },
-          options.format,
-          'source'
-        );
+         outputFormatted(
+           {
+             kind: 'sources',
+             sources: result.items,
+             nextPageToken: result.nextPageToken,
+             totalSize: result.totalSize,
+           },
+           options.format
+         );
       }
     });
 
@@ -83,7 +84,7 @@ export function createSourcesCommands(): Command {
 
       const source = await api.get(sourceId);
 
-      output(source, options.format, 'source');
+      outputFormatted({ kind: 'source', source }, options.format);
     });
 
   return sources;
