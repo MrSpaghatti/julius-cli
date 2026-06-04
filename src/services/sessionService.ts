@@ -67,13 +67,19 @@ export async function createSession(
     }
   }
 
-  const session = await api.create({
+  const createParams: Parameters<typeof api.create>[0] = {
     prompt: options.prompt,
     title: options.title,
     sourceContext,
-    automationMode: options.autoPr ? 'AUTO_CREATE_PR' : 'NONE',
-    requirePlanApproval: options.requireApproval || false,
-  });
+  };
+  if (options.autoPr) {
+    createParams.automationMode = 'AUTO_CREATE_PR';
+  }
+  if (options.requireApproval) {
+    createParams.requirePlanApproval = true;
+  }
+
+  const session = await api.create(createParams);
 
   return {
     client,
