@@ -46,6 +46,7 @@ jest.unstable_mockModule('../../../src/utils/pagination.js', () => ({
 // Mock git
 jest.unstable_mockModule('../../../src/utils/git.js', () => ({
   inferRepo: jest.fn(),
+  getCurrentBranch: jest.fn(() => 'main'),
   pullSessionChanges: jest.fn(),
   diffSessionChanges: jest.fn(),
 }));

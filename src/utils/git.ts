@@ -26,6 +26,21 @@ export const gitProvider = {
 };
 
 /**
+ * Gets the current branch name from the local git repository.
+ * Returns 'main' as fallback if detection fails.
+ */
+export function getCurrentBranch(): string {
+  try {
+    const branch = gitProvider.exec(['rev-parse', '--abbrev-ref', 'HEAD']).trim();
+    if (branch && branch !== 'HEAD') {
+      return branch;
+    }
+  } catch {
+  }
+  return 'main';
+}
+
+/**
  * Attempts to infer the repository from the local git configuration.
  */
 export function inferRepo(): RepoInfo {

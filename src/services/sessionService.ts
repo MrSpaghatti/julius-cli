@@ -3,7 +3,7 @@ import type { JulesAPIClient } from '../api/client.js';
 import type { Session } from '../api/types.js';
 import { getClient } from '../utils/client.js';
 import { InvalidArgsError } from '../utils/errors.js';
-import { inferRepo } from '../utils/git.js';
+import { inferRepo, getCurrentBranch } from '../utils/git.js';
 import type { OutputFormat } from '../cli/types.js';
 
 export interface CreateSessionParams {
@@ -56,15 +56,14 @@ export async function createSession(
   const sourceId = `${provider}/${repo}`;
   const source = `sources/${sourceId}`;
 
+  const providerBranch = options.branch || getCurrentBranch();
   const sourceContext: Session['sourceContext'] = { source };
-  if (options.branch) {
-    if (provider === 'gitlab') {
-      sourceContext.gitlabRepoContext = { startingBranch: options.branch };
-    } else if (provider === 'bitbucket') {
-      sourceContext.bitbucketRepoContext = { startingBranch: options.branch };
-    } else {
-      sourceContext.githubRepoContext = { startingBranch: options.branch };
-    }
+  if (provider === 'gitlab') {
+    sourceContext.gitlabRepoContext = { startingBranch: providerBranch };
+  } else if (provider === 'bitbucket') {
+    sourceContext.bitbucketRepoContext = { startingBranch: providerBranch };
+  } else {
+    sourceContext.githubRepoContext = { startingBranch: providerBranch };
   }
 
   const createParams: Parameters<typeof api.create>[0] = {
