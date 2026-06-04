@@ -141,6 +141,14 @@ export function App(): React.ReactNode {
       return;
     }
 
+    if (input === 'x') {
+      const session = sessions[selectedIndex];
+      if (session && session.state !== 'COMPLETED' && session.state !== 'FAILED' && session.state !== 'CANCELLED') {
+        handleCancel();
+      }
+      return;
+    }
+
     const stateIndex = FILTER_STATES.findIndex(s => s[0] === input && s !== 'all');
     if (stateIndex >= 0 && stateIndex + 1 < FILTER_STATES.length) {
       const newFilter = FILTER_STATES[stateIndex + 1];
@@ -189,6 +197,22 @@ export function App(): React.ReactNode {
       await fetchSessions();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to approve plan');
+    } finally {
+      setActionLoading(false);
+    }
+  }, [selectedIndex, sessions, fetchSessions]);
+
+  const handleCancel = useCallback(async () => {
+    const session = sessions[selectedIndex];
+    if (!session) return;
+    setActionLoading(true);
+    try {
+      const client = await getClient();
+      const api = new SessionsAPI(client);
+      await api.cancel(session.id);
+      await fetchSessions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel session');
     } finally {
       setActionLoading(false);
     }

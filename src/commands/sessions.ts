@@ -274,6 +274,18 @@ export function createSessionsCommands(): Command {
     });
 
   sessions
+    .command('cancel')
+    .description('Cancel a running session')
+    .argument('<session-id>', 'Session ID')
+    .action(async (sessionId: string) => {
+      const client = await getClient();
+      const api = new SessionsAPI(client);
+      await api.cancel(sessionId);
+      Output.log(JSON.stringify({ status: 'success', message: 'Session cancelled successfully', sessionId }));
+      Output.info(`✓ Session ${sessionId} cancelled successfully`);
+    });
+
+  sessions
     .command('pull')
     .description('Fetch and checkout the branch/PR created by a session')
     .argument('<session-id>', 'Session ID')

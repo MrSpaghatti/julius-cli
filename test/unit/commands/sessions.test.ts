@@ -224,6 +224,17 @@ describe('Sessions Commands', () => {
       expect(mockSessionsAPIInstance.approvePlan).toHaveBeenCalledWith('123');
     });
 
+    it('should cancel a session', async () => {
+      const infoSpy = jest.spyOn(Output, 'info').mockImplementation(() => {});
+      const logSpy = jest.spyOn(Output, 'log').mockImplementation(() => {});
+      const root = new Command().addCommand(sessionsCmd);
+      await root.parseAsync(['node', 'test', 'sessions', 'cancel', '123']);
+
+      expect(mockSessionsAPIInstance.cancel).toHaveBeenCalledWith('123');
+      infoSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
     it('should pull changes', async () => {
       const mockSession = {
         id: '123',

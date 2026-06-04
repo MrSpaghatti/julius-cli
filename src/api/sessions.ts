@@ -79,10 +79,7 @@ export class SessionsAPI {
   }
 
   async cancel(sessionId: string): Promise<void> {
-    throw new Error(
-      'The Jules API does not expose a cancel endpoint. ' +
-      `Cancel this session via the web UI at https://jules.google.com/session/${sessionId}`
-    );
+    await this.client.delete(`/sessions/${sessionId}`);
   }
 
   async registerWebhook(

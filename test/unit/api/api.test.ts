@@ -103,10 +103,14 @@ describe('API classes', () => {
       await sessionsAPI.approvePlan('123');
     });
 
-    it('should throw when cancelling a session (not supported by API)', async () => {
-      await expect(sessionsAPI.cancel('123')).rejects.toThrow(
-        'Jules API does not expose a cancel endpoint'
+    it('should cancel a session', async () => {
+      server.use(
+        http.delete(`${baseURL}/sessions/123`, () => {
+          return new HttpResponse(null, { status: 200 });
+        })
       );
+
+      await sessionsAPI.cancel('123');
     });
   });
 
