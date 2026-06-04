@@ -274,46 +274,6 @@ export function createSessionsCommands(): Command {
     });
 
   sessions
-    .command('cancel')
-    .description('Cancel a running session')
-    .argument('<session-id>', 'Session ID')
-    .option(
-      '--format <format>',
-      'Output format (json|pretty|quiet|table)',
-      config.get('defaultFormat') || 'json'
-    )
-    .action(async (sessionId: string, options: { format: OutputFormat }) => {
-      const client = await getClient();
-      const api = new SessionsAPI(client);
-
-      let source: string | undefined;
-      try {
-        const session = await api.get(sessionId);
-        source = session.sourceContext?.source;
-      } catch {
-      }
-      if (!source) {
-        const allPages = await fetchAllPages(
-          (token, size) => api.list(size, token),
-          100
-        );
-        const found = allPages.items.find(s => s.id === sessionId);
-        source = found?.sourceContext?.source;
-      }
-
-      await api.cancel(sessionId, source);
-
-      output(
-        {
-          status: 'success',
-          message: 'Session cancelled successfully',
-          sessionId,
-        },
-        options.format
-      );
-    });
-
-  sessions
     .command('pull')
     .description('Fetch and checkout the branch/PR created by a session')
     .argument('<session-id>', 'Session ID')

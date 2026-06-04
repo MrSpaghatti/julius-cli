@@ -64,7 +64,7 @@ _julius_cli() {
                 ;;
             sessions)
                 local -a subcommands
-                subcommands=('list:List sessions' 'get:Get session' 'create:Create session' 'cancel:Cancel session' 'delete:Delete session' 'diff:Show session changes' 'pull:Pull session changes')
+                subcommands=('list:List sessions' 'get:Get session' 'create:Create session' 'delete:Delete session' 'diff:Show session changes' 'pull:Pull session changes')
                 _describe -t subcommands 'subcommand' subcommands
                 ;;
             *)

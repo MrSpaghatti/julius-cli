@@ -78,12 +78,11 @@ export class SessionsAPI {
     await this.client.post(`/sessions/${sessionId}:approvePlan`, {});
   }
 
-  async cancel(sessionId: string, source?: string): Promise<void> {
-    if (source) {
-      await this.client.post(`/${source}/sessions/${sessionId}:cancel`, {});
-    } else {
-      await this.client.post(`/sessions/${sessionId}:cancel`, {});
-    }
+  async cancel(sessionId: string): Promise<void> {
+    throw new Error(
+      'The Jules API does not expose a cancel endpoint. ' +
+      `Cancel this session via the web UI at https://jules.google.com/session/${sessionId}`
+    );
   }
 
   async registerWebhook(

@@ -224,13 +224,6 @@ describe('Sessions Commands', () => {
       expect(mockSessionsAPIInstance.approvePlan).toHaveBeenCalledWith('123');
     });
 
-    it('should cancel a session', async () => {
-      const root = new Command().addCommand(sessionsCmd);
-      await root.parseAsync(['node', 'test', 'sessions', 'cancel', '123']);
-
-      expect(mockSessionsAPIInstance.cancel).toHaveBeenCalledWith('123', undefined);
-    });
-
     it('should pull changes', async () => {
       const mockSession = {
         id: '123',
