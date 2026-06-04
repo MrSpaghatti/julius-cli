@@ -79,7 +79,7 @@ export class SessionsAPI {
   }
 
   async cancel(sessionId: string): Promise<void> {
-    await this.client.post(`/sessions/${sessionId}:cancel`, {});
+    await this.client.delete(`/sessions/${sessionId}`);
   }
 
   async registerWebhook(
