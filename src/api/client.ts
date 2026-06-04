@@ -88,7 +88,11 @@ export class JulesAPIClient {
       const url = axiosError.config?.url || '';
       const parts = url.split('/').filter(Boolean);
       if (parts.length >= 1) {
-        const id = parts[parts.length - 1];
+        let id = parts[parts.length - 1];
+        const actionColon = id.lastIndexOf(':');
+        if (actionColon > 0) {
+          id = id.slice(0, actionColon);
+        }
         let resource = 'Resource';
         if (parts.length >= 2) {
           const rawResource = parts[parts.length - 2];
