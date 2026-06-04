@@ -2,10 +2,15 @@ import type { OutputFormat } from '../cli/types.js';
 
 export interface CLIConfig {
   apiKey?: string;
-  apiEndpoint?: string; // Default: https://jules.googleapis.com/v1alpha
+  apiEndpoint?: string;
   authMethod?: 'apikey' | 'oauth';
   defaultFormat?: OutputFormat;
-  defaultPageSize?: number; // Default: 30, max: 100
-  pollInterval?: number; // Default: 5000ms
-  maxPollAttempts?: number; // Default: 120
+  defaultPageSize?: number;
+  pollInterval?: number;
+  maxPollAttempts?: number;
+  daemon?: {
+    pollInterval?: number;
+    notifications?: ('system' | 'agent')[];
+    pidFile?: string;
+  };
 }

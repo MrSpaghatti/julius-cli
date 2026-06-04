@@ -41,6 +41,21 @@ const schema = {
     default: 120,
     minimum: 1,
   },
+  daemon: {
+    type: 'object',
+    default: {
+      pollInterval: 30000,
+      notifications: ['system', 'agent'],
+    },
+    properties: {
+      pollInterval: { type: 'number', default: 30000, minimum: 5000 },
+      notifications: {
+        type: 'array',
+        default: ['system', 'agent'],
+        items: { type: 'string', enum: ['system', 'agent'] },
+      },
+    },
+  },
 } as const;
 
 class ConfigManager {

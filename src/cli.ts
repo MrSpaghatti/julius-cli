@@ -10,6 +10,7 @@ import { createInteractiveCommand } from './commands/interactive.js';
 import { createListenCommand } from './commands/listen.js';
 import { createCompletionCommand } from './commands/completion.js';
 import { createTuiCommand } from './commands/tui.js';
+import { createDaemonCommand } from './commands/daemon.js';
 import { createCommandRegistry, createInteractiveCommandExecutor } from './cli/parser.js';
 import { handleError } from './utils/errors.js';
 
@@ -29,6 +30,7 @@ const commandsAfterInteractive = [
   createListenCommand(),
   createCompletionCommand(),
   createTuiCommand(),
+  createDaemonCommand(),
 ];
 
 const interactiveCommandNames = createCommandRegistry([
