@@ -78,9 +78,7 @@ export class SessionsAPI {
     await this.client.post(`/sessions/${sessionId}:approvePlan`, {});
   }
 
-  async cancel(sessionId: string): Promise<void> {
-    const session = await this.get(sessionId);
-    const source = session.sourceContext?.source;
+  async cancel(sessionId: string, source?: string): Promise<void> {
     if (source) {
       await this.client.post(`/${source}/sessions/${sessionId}:cancel`, {});
     } else {

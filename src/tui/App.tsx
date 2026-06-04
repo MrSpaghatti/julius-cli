@@ -209,7 +209,7 @@ export function App(): React.ReactNode {
     try {
       const client = await getClient();
       const api = new SessionsAPI(client);
-      await api.cancel(session.id);
+      await api.cancel(session.id, session.sourceContext?.source);
       await fetchSessions();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to cancel session');

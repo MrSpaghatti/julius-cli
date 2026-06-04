@@ -286,7 +286,22 @@ export function createSessionsCommands(): Command {
       const client = await getClient();
       const api = new SessionsAPI(client);
 
-      await api.cancel(sessionId);
+      let source: string | undefined;
+      try {
+        const session = await api.get(sessionId);
+        source = session.sourceContext?.source;
+      } catch {
+      }
+      if (!source) {
+        const allPages = await fetchAllPages(
+          (token, size) => api.list(size, token),
+          100
+        );
+        const found = allPages.items.find(s => s.id === sessionId);
+        source = found?.sourceContext?.source;
+      }
+
+      await api.cancel(sessionId, source);
 
       output(
         {

@@ -228,7 +228,7 @@ describe('Sessions Commands', () => {
       const root = new Command().addCommand(sessionsCmd);
       await root.parseAsync(['node', 'test', 'sessions', 'cancel', '123']);
 
-      expect(mockSessionsAPIInstance.cancel).toHaveBeenCalledWith('123');
+      expect(mockSessionsAPIInstance.cancel).toHaveBeenCalledWith('123', undefined);
     });
 
     it('should pull changes', async () => {
