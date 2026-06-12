@@ -40,3 +40,4 @@ config.json
 # Sisyphus work artifacts
 .sisyphus/
 *.png
+code2prompt-output.md
