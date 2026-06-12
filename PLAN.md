@@ -14,12 +14,14 @@ Build a TypeScript CLI tool that wraps the Jules REST API for programmatic contr
 - ✅ Phase 4 (Polish): 100% Complete
 - ✅ Phase 5 (Templates & Git): 100% Complete
 - ✅ Phase 6 (Advanced Automation): 100% Complete
+- ✅ Phase 7 (Google OAuth): 100% Complete
+- ✅ Phase 8 (Agentic DX & TUI Polishing): 100% Complete
 
 ---
 
 ## Phase 1: Foundation (MVP) ✅ COMPLETED
 
-- [x] Initial project setup (TS, tsup, Jest)
+- [ ] Initial project setup (TS, tsup, Jest)
 - [x] Secure API key storage (cross-keychain)
 - [x] Base API client with retry logic
 - [x] Config management system
@@ -66,90 +68,127 @@ Build a TypeScript CLI tool that wraps the Jules REST API for programmatic contr
 ## Phase 6: Advanced Automation & Interactivity ✅ COMPLETED
 
 ### 1. Interactive Mode (REPL) ✅
+
 - [x] Persistent shell session
 - [x] Context persistence (e.g., current repository)
 - [x] Command chaining and shortcuts
 
 ### 2. Webhook Support ✅
+
 - [x] Local listener for session updates
 - [x] Register webhooks via API to avoid polling
 - [x] Real-time activity streaming via webhooks
 
 ### 3. Server-side Filtering ✅
+
 - [x] Efficient filtering for sessions and activities via API
 - [x] Reduced client-side processing and quota usage
 - [x] Consistent filter syntax across commands
 
 ### 4. Codebase Optimization ✅
+
 - [x] Refactor repetitive output logic into common formatters
 - [x] Maintain 100% command coverage with unit tests
 - [x] Final polish and documentation updates for v0.5.0
 
 ---
 
-## Phase 7: Google OAuth Support (Planned)
+## Phase 7: Google OAuth Support ✅ COMPLETED
 
-### 1. OAuth 2.0 Browser Flow
-- [ ] `auth login` command — opens browser to Google consent screen, captures auth code via loopback HTTP server, exchanges for access + refresh tokens
-- [ ] PKCE (S256) code challenge for security on the loopback redirect
-- [ ] Random `state` parameter to prevent CSRF
+### 1. OAuth 2.0 Browser Flow ✅
 
-### 2. Device Code Flow (Headless)
-- [ ] `auth login --device-code` — prints URL + code to terminal, polls token endpoint until user completes auth in a separate browser
+- [x] `auth login` command — opens browser to Google consent screen, captures auth code via loopback HTTP server, exchanges for access + refresh tokens
+- [x] PKCE (S256) code challenge for security on the loopback redirect
+- [x] Random `state` parameter to prevent CSRF
 
-### 3. Token Storage & Refresh
-- [ ] Store OAuth access token + refresh token in system keychain (separate keys from API key)
-- [ ] Auto-refresh expired access tokens transparently before each API call
-- [ ] `auth logout` alias for `auth clear` that removes all credentials
+### 2. Device Code Flow (Headless) ✅
 
-### 4. API Client Updates
-- [ ] `JulesAPIClient` supports both `X-Goog-Api-Key` (API key) and `Authorization: Bearer <token>` (OAuth)
-- [ ] Constructor accepts a `TokenProvider` interface — either static API key or live-refreshing OAuth credential
-- [ ] `CLIConfig` gains an `authMethod: 'apikey' | 'oauth'` field to track which is active
+- [x] `auth login --device-code` — prints URL + code to terminal, polls token endpoint until user completes auth in a separate browser
+
+### 3. Token Storage & Refresh ✅
+
+- [x] Store OAuth access token + refresh token in system keychain (separate keys from API key)
+- [x] Auto-refresh expired access tokens transparently before each API call
+- [x] `auth logout` alias for `auth clear` that removes all credentials
+
+### 4. API Client Updates ✅
+
+- [x] `JulesAPIClient` supports both `X-Goog-Api-Key` (API key) and `Authorization: Bearer <token>` (OAuth)
+- [x] Constructor accepts a `TokenProvider` interface — either static API key or live-refreshing OAuth credential
+- [x] `CLIConfig` gains an `authMethod: 'apikey' | 'oauth'` field to track which is active
 
 ### 5. Auth Method Resolution Order
+
 Priority (highest first):
+
 1. `JULES_OAUTH_TOKEN` env var → direct Bearer token (CI/automation)
 2. `JULES_API_KEY` env var → X-Goog-Api-Key (existing)
 3. Stored OAuth tokens via `auth login` → Bearer token with auto-refresh
 4. Stored API key via `auth set` → X-Goog-Api-Key (existing)
 
 ### 6. New Files
+
 - `src/utils/oauth.ts` — PKCE generation, browser redirect flow, device code flow, token exchange/refresh
 - `src/utils/token-provider.ts` — `TokenProvider` interface + `ApiKeyProvider` and `OAuthProvider` implementations
 
 ### 7. Updated Files
+
 - `src/commands/auth.ts` — add `login`, `login --device-code`, `logout` subcommands; update `status` to show auth method
 - `src/config/index.ts` — add `getOAuthTokens`, `setOAuthTokens`, `clearOAuthTokens`, `getAuthMethod`, `setAuthMethod`
 - `src/api/client.ts` — accept `TokenProvider` instead of raw API key string
 - `src/api/types.ts` — add `authMethod` to `CLIConfig`
 - `src/utils/client.ts` — `getClient()` resolves the active token provider based on priority order
 
-### 8. New Dependency
-- `google-auth-library` — Google's official Node.js OAuth2 client; handles token exchange and refresh
-
-### 9. Test Coverage
-- Unit tests for PKCE generation (correct length, encoding)
-- Unit tests for `OAuthProvider.getToken()` — returns cached token, detects expiry, calls refresh
-- Unit tests for auth method resolution in `getClient()`
-- Integration tests for `auth login` and `auth status` with mocked Google token endpoints
-
 ---
+
+## Phase 8: Agentic DX & TUI Polishing ✅ COMPLETED
+
+### 1. TUI Chat Panel ✅
+
+- [x] Conversation view with text input for sending messages
+- [x] Activity history display with author coloring (user/agent)
+- [x] Enter to open chat, Esc to return to dashboard
+
+### 2. TUI Actions ✅
+
+- [x] Plan approval from dashboard
+- [x] Session cancellation from dashboard
+- [x] Repo filter by pressing `/`
+
+### 3. Daemon Mode ✅
+
+- [x] Background process for monitoring all sessions
+- [x] System notifications via `node-notifier` for state changes, approvals, messages
+- [x] Foreground mode with formatted event output
+- [x] PID-based lifecycle management (start/stop/status)
+- [x] Configurable poll interval and notification targets
+- [x] Auto-stop after 10 consecutive polling errors
+
+### 4. Shell Completion ✅
+
+- [x] Bash completion generation (`julius-cli completion bash`)
+- [x] Zsh completion generation (`julius-cli completion zsh`)
+
+### 5. Multi-Provider Parity ✅
+
+- [x] GitLab and Bitbucket support alongside GitHub
+- [x] Provider-specific token env vars (`JULES_GITLAB_API_KEY`, `JULES_BITBUCKET_API_KEY`)
+- [x] `sessions pull` supports GitLab MR and Bitbucket PR fetch patterns
+
+### 6. Interactive Mode Reﬁnements ✅
+
+- [x] In-process command execution (faster than subprocess)
+- [x] Macro support (`macro <name> <cmd...>`, run with `!<name>`)
+- [x] Tab-completion for root commands
+- [x] Better signal handling (Ctrl+C clears line instead of exiting)
 
 ## Future Roadmap
 
-### Phase 8: Advanced Features
+### Phase 9: Advanced Features
+
 - [ ] Batch session creation from a single prompt
 - [ ] Group operations (bulk cancel, bulk pull)
 - [ ] Cost and quota monitoring tools
 - [ ] Session performance analytics
-
----
-
-## Project Timeline
-
-- **2026-04-06:** v0.1.0 MVP Released
-- **2026-04-06:** v0.2.0 Interaction features complete
-- **2026-04-06:** v0.3.0 Automation features complete
-- **2026-04-06:** v0.4.0 Templates & Git complete
-- **2026-04-06:** v0.5.0 Advanced Automation complete
+- [ ] TUI quick search (`/` to search by repo, creator, or ID)
+- [ ] CLI `--creator` filter for `sessions list`

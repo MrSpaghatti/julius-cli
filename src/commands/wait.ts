@@ -1,193 +1,242 @@
-import { JulesAPIClient } from '../api/client.js';
-import { SessionsAPI } from '../api/sessions.js';
-import { ActivitiesAPI } from '../api/activities.js';
-import { Session, SessionState, Activity } from '../api/types.js';
-import type { OutputFormat } from '../cli/types.js';
-import { outputFormatted, type FormatterContext } from '../output/formatter.js';
-import { CLIError, ExitCode } from '../utils/errors.js';
-import { sleep } from '../utils/polling.js';
-import ora from 'ora';
+import { JulesAPIClient } from "../api/client.js";
+import { SessionsAPI } from "../api/sessions.js";
+import { ActivitiesAPI } from "../api/activities.js";
+import { Session, SessionState, Activity } from "../api/types.js";
+import type { OutputFormat } from "../cli/types.js";
+import { outputFormatted, type FormatterContext } from "../output/formatter.js";
+import { CLIError, ExitCode } from "../utils/errors.js";
+import { sleep } from "../utils/polling.js";
+import ora, { type Ora } from "ora";
 
 export interface WaitCommandOptions {
-  sessionId: string;
-  timeout?: number;
-  interval?: number;
-  state?: SessionState;
-  format?: OutputFormat;
-  verbose?: boolean;
-  follow?: boolean;
-  activityTypes?: string[];
-  noSpinner?: boolean;
-  prefix?: string;
-  activityFormatterContext?: FormatterContext;
+	sessionId: string;
+	timeout?: number;
+	interval?: number;
+	state?: SessionState;
+	format?: OutputFormat;
+	verbose?: boolean;
+	follow?: boolean;
+	activityTypes?: string[];
+	noSpinner?: boolean;
+	prefix?: string;
+	activityFormatterContext?: FormatterContext;
 }
 
-const TERMINAL_STATES: SessionState[] = ['COMPLETED', 'FAILED', 'CANCELLED'];
+const TERMINAL_STATES: SessionState[] = ["COMPLETED", "FAILED", "CANCELLED"];
 
-export async function waitCommand(client: JulesAPIClient, options: WaitCommandOptions): Promise<void> {
-  const {
-    sessionId,
-    timeout = 600,
-    interval = 5,
-    state,
-    format = 'json',
-    verbose = false,
-    follow = false,
-    activityTypes,
-    noSpinner = false,
-    prefix,
-  } = options;
+export async function waitCommand(
+	client: JulesAPIClient,
+	options: WaitCommandOptions,
+): Promise<void> {
+	const {
+		sessionId,
+		timeout = 600,
+		interval = 5,
+		state,
+		format = "json",
+		verbose = false,
+		follow = false,
+		activityTypes,
+		noSpinner = false,
+		prefix,
+	} = options;
 
-  const sessionsAPI = new SessionsAPI(client);
-  const activitiesAPI = new ActivitiesAPI(client);
-  const startTime = Date.now();
-  const timeoutMs = timeout * 1000;
-  const intervalMs = interval * 1000;
+	const sessionsAPI = new SessionsAPI(client);
+	const activitiesAPI = new ActivitiesAPI(client);
+	const startTime = Date.now();
+	const timeoutMs = timeout * 1000;
+	const intervalMs = interval * 1000;
 
-  // Target states to wait for
-  const targetStates = state ? [state] : TERMINAL_STATES;
+	// Target states to wait for
+	const targetStates = state ? [state] : TERMINAL_STATES;
 
-  let spinner: any;
-  if (format === 'pretty' && !verbose && !follow && !noSpinner) {
-    spinner = ora(`Waiting for session ${sessionId} (target: ${targetStates.join('/')})...`).start();
-  }
+	let spinner: Ora | null = null;
+	if (format === "pretty" && !verbose && !follow && !noSpinner) {
+		spinner = ora(
+			`Waiting for session ${sessionId} (target: ${targetStates.join("/")})...`,
+		).start();
+	}
 
-  let lastSession: Session | null = null;
-  let attempts = 0;
-  let lastSeenTime: string | undefined = undefined;
-  const seenActivityIds = new Set<string>();
-  let consecutiveErrors = 0;
-  const MAX_CONSECUTIVE_ERRORS = 10;
-  let isFirstPass = true;
+	let lastSession: Session | null = null;
+	let attempts = 0;
+	let lastSeenTime: string | undefined = undefined;
+	const seenActivityIds = new Set<string>();
+	let consecutiveErrors = 0;
+	const MAX_CONSECUTIVE_ERRORS = 10;
+	let isFirstPass = true;
 
-  while (true) {
-    attempts++;
-    const elapsed = Date.now() - startTime;
+	while (true) {
+		attempts++;
+		const elapsed = Date.now() - startTime;
 
-    // Check timeout
-    if (elapsed >= timeoutMs) {
-      if (spinner) spinner.fail(`Timeout reached for session ${sessionId}`);
-      throw new CLIError(
-        `Timeout waiting for session ${sessionId} after ${timeout} seconds. Last state: ${lastSession?.state || 'UNKNOWN'}`,
-        ExitCode.TIMEOUT
-      );
-    }
+		// Check timeout
+		if (elapsed >= timeoutMs) {
+			if (spinner) spinner.fail(`Timeout reached for session ${sessionId}`);
+			throw new CLIError(
+				`Timeout waiting for session ${sessionId} after ${timeout} seconds. Last state: ${lastSession?.state || "UNKNOWN"}`,
+				ExitCode.TIMEOUT,
+			);
+		}
 
-    try {
-      // Poll session state
-      const session = await sessionsAPI.get(sessionId);
-      lastSession = session;
-      consecutiveErrors = 0; // Reset error count on success
+		try {
+			// Poll session state
+			const session = await sessionsAPI.get(sessionId);
+			lastSession = session;
+			consecutiveErrors = 0; // Reset error count on success
 
-      if (verbose) {
-        console.error(`${prefix || ''}[${attempts}] Session ${sessionId} state: ${session.state} (${Math.floor(elapsed / 1000)}s elapsed)`);
-      } else if (spinner) {
-        spinner.text = `Waiting for session ${sessionId}... (state: ${session.state}, ${Math.floor(elapsed / 1000)}s elapsed)`;
-      } else if (format === 'pretty' && !follow) {
-        // For multiple sessions without follow, show periodic updates
-        if (attempts === 1 || attempts % 5 === 0) {
-          console.log(`${prefix || ''}Session ${sessionId} state: ${session.state} (${Math.floor(elapsed / 1000)}s elapsed)`);
-        }
-      }
+			if (verbose) {
+				console.error(
+					`${prefix || ""}[${attempts}] Session ${sessionId} state: ${session.state} (${Math.floor(elapsed / 1000)}s elapsed)`,
+				);
+			} else if (spinner) {
+				spinner.text = `Waiting for session ${sessionId}... (state: ${session.state}, ${Math.floor(elapsed / 1000)}s elapsed)`;
+			} else if (format === "pretty" && !follow) {
+				// For multiple sessions without follow, show periodic updates
+				if (attempts === 1 || attempts % 5 === 0) {
+					console.log(
+						`${prefix || ""}Session ${sessionId} state: ${session.state} (${Math.floor(elapsed / 1000)}s elapsed)`,
+					);
+				}
+			}
 
-      // If follow mode is on, fetch and output new activities
-      if (follow) {
-        try {
-          let newActivities: Activity[] = [];
-          let pollToken: string | undefined = undefined;
-          
-          // Optimization: Filter by createTime after the first pass
-          const filter = lastSeenTime ? `createTime > "${lastSeenTime}"` : undefined;
+			// If follow mode is on, fetch and output new activities
+			if (follow) {
+				try {
+					let newActivities: Activity[] = [];
+					let pollToken: string | undefined = undefined;
 
-          while (true) {
-            const result = await activitiesAPI.list(sessionId, 100, pollToken, filter);
+					// Optimization: Filter by createTime after the first pass
+					const filter = lastSeenTime
+						? `createTime > "${lastSeenTime}"`
+						: undefined;
 
-            for (const act of result.items) {
-              if (!seenActivityIds.has(act.id)) {
-                if (!isFirstPass) {
-                  newActivities.push(act);
-                }
-                seenActivityIds.add(act.id);
-                // Update last seen time to the latest activity's createTime
-                if (!lastSeenTime || new Date(act.createTime) > new Date(lastSeenTime)) {
-                  lastSeenTime = act.createTime;
-                }
-              }
-            }
+					while (true) {
+						const result = await activitiesAPI.list(
+							sessionId,
+							100,
+							pollToken,
+							filter,
+						);
 
-            if (!result.nextPageToken) {
-              break;
-            }
-            pollToken = result.nextPageToken;
-          }
+						for (const act of result.items) {
+							if (!seenActivityIds.has(act.id)) {
+								if (!isFirstPass) {
+									newActivities.push(act);
+								}
+								seenActivityIds.add(act.id);
+								// Update last seen time to the latest activity's createTime
+								if (
+									!lastSeenTime ||
+									new Date(act.createTime) > new Date(lastSeenTime)
+								) {
+									lastSeenTime = act.createTime;
+								}
+							}
+						}
 
-          if (isFirstPass) {
-            if (verbose) console.error(`[wait] Initialized with ${seenActivityIds.size} existing activities.`);
-            isFirstPass = false;
-          }
+						if (!result.nextPageToken) {
+							break;
+						}
+						pollToken = result.nextPageToken;
+					}
 
-          // Filter by activity type if provided
-          if (activityTypes && activityTypes.length > 0) {
-            const typeSet = new Set(activityTypes.map(t => t.toUpperCase()));
-            newActivities = newActivities.filter(a => typeSet.has(a.type));
-          }
+					if (isFirstPass) {
+						if (verbose)
+							console.error(
+								`[wait] Initialized with ${seenActivityIds.size} existing activities.`,
+							);
+						isFirstPass = false;
+					}
 
-          // Output new activities in chronological order
-          newActivities.sort((a, b) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime());
+					// Filter by activity type if provided
+					if (activityTypes && activityTypes.length > 0) {
+						const typeSet = new Set(activityTypes.map((t) => t.toUpperCase()));
+						newActivities = newActivities.filter((a) => typeSet.has(a.type));
+					}
 
-          for (const activity of newActivities) {
-            outputFormatted({ kind: 'activity', activity }, format, { prefix });
-          }
-        } catch (actError) {
-          if (verbose) {
-            console.error('Error fetching activities:', actError);
-          }
-          // Don't fail the whole wait command just because activity fetch failed once
-        }
-      }
+					// Output new activities in chronological order
+					newActivities.sort(
+						(a, b) =>
+							new Date(a.createTime).getTime() -
+							new Date(b.createTime).getTime(),
+					);
 
-      // Check if we've reached target state
-      if (session.state && targetStates.includes(session.state)) {
-        if (spinner) {
-          spinner.succeed(`Session ${sessionId} reached state: ${session.state}`);
-        } else if (format === 'pretty') {
-          console.log(`${prefix || ''}Session ${sessionId} reached state: ${session.state}`);
-        }
+					for (const activity of newActivities) {
+						outputFormatted({ kind: "activity", activity }, format, { prefix });
+					}
+				} catch (actError) {
+					if (verbose) {
+						console.error("Error fetching activities:", actError);
+					}
+					// Don't fail the whole wait command just because activity fetch failed once
+				}
+			}
 
-        // Output final session details if not in quiet mode
-        if (format !== 'quiet') {
-          if (format === 'pretty') console.log(prefix ? `${prefix}\nFinal Session State:` : '\nFinal Session State:');
-          outputFormatted({ kind: 'session', session }, format, { prefix });
-        }
-        return;
-      }
+			// Check if we've reached target state
+			if (session.state && targetStates.includes(session.state)) {
+				if (spinner) {
+					spinner.succeed(
+						`Session ${sessionId} reached state: ${session.state}`,
+					);
+				} else if (format === "pretty") {
+					console.log(
+						`${prefix || ""}Session ${sessionId} reached state: ${session.state}`,
+					);
+				}
 
-      // Wait before next poll
-      await sleep(intervalMs);
-    } catch (error: any) {
-      consecutiveErrors++;
+				// Output final session details if not in quiet mode
+				if (format !== "quiet") {
+					if (format === "pretty")
+						console.log(
+							prefix
+								? `${prefix}\nFinal Session State:`
+								: "\nFinal Session State:",
+						);
+					outputFormatted({ kind: "session", session }, format, { prefix });
+				}
+				return;
+			}
 
-      if (verbose) {
-        console.error(`Poll attempt ${attempts} failed (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${error.message}`);
-      }
+			// Wait before next poll
+			await sleep(intervalMs);
+		} catch (error: unknown) {
+			consecutiveErrors++;
 
-      // If it's a 404, the session is gone, so stop immediately
-      if (error.status === 404) {
-        if (spinner) spinner.fail(`Session ${sessionId} not found.`);
-        throw error;
-      }
+			const errObj =
+				error && typeof error === "object"
+					? (error as Record<string, unknown>)
+					: null;
+			const errMsg =
+				errObj && typeof errObj.message === "string"
+					? errObj.message
+					: String(error);
 
-      // If we've had too many consecutive errors, give up
-      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-        if (spinner) spinner.fail(`Too many consecutive API errors, giving up after ${MAX_CONSECUTIVE_ERRORS} attempts`);
-        throw new CLIError(
-          `Too many consecutive API errors waiting for session ${sessionId}. Last error: ${error.message}`,
-          ExitCode.NETWORK_ERROR
-        );
-      }
+			if (verbose) {
+				console.error(
+					`Poll attempt ${attempts} failed (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${errMsg}`,
+				);
+			}
 
-      // For other errors, wait and continue
-      await sleep(intervalMs);
-    }
-  }
+			// If it's a 404, the session is gone, so stop immediately
+			if (errObj && errObj.status === 404) {
+				if (spinner) spinner.fail(`Session ${sessionId} not found.`);
+				throw error;
+			}
+
+			// If we've had too many consecutive errors, give up
+			if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+				if (spinner)
+					spinner.fail(
+						`Too many consecutive API errors, giving up after ${MAX_CONSECUTIVE_ERRORS} attempts`,
+					);
+				throw new CLIError(
+					`Too many consecutive API errors waiting for session ${sessionId}. Last error: ${errMsg}`,
+					ExitCode.NETWORK_ERROR,
+				);
+			}
+
+			// For other errors, wait and continue
+			await sleep(intervalMs);
+		}
+	}
 }

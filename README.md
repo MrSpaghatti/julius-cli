@@ -1,4 +1,4 @@
-# julius-cli v0.7.0
+# julius-cli v0.8.0
 
 AI-first CLI for Jules REST API with JSON output and full automation support.
 
@@ -96,9 +96,13 @@ julius-cli tui
 The TUI dashboard features:
 - **Live session list** with state-colored indicators (green=completed, yellow=executing, red=failed, etc.)
 - **Real-time activity stream** — fetch and display session activities as they arrive
-- **Inline session creation** — press `c` to create a new session with prompt, repo, and title
+- **Chat panel** — press `Enter` on a session to open a conversation view with text input; `Esc` to exit
+- **Session creation** — press `c` to create a new session with prompt, repo, and title
+- **Approve plans** — approve sessions awaiting plan review inline
+- **Cancel sessions** — cancel active sessions from the dashboard
+- **Repo filter** — press `/` to filter sessions by repository name
 - **State filtering** — press `1-7` to filter sessions by state (PENDING→CANCELLED), `a` for all
-- **Keyboard navigation** — `↑↓` to select, `Enter` to expand, `q` to quit
+- **Keyboard navigation** — `↑↓` to select, `Enter` for chat, `q` to quit
 
 ### Interactive Mode (REPL) 🆕
 
@@ -151,10 +155,44 @@ julius-cli listen --port 8080
 julius-cli listen --register <session-id> --host https://your-public-url.com
 ```
 
+### Daemon Mode 🆕
+
+Background monitoring with system/agent notifications (v0.7.1+). Run as a foreground process, or start/stop a background daemon:
+
+```bash
+# Foreground — events printed to terminal
+julius-cli daemon
+julius-cli daemon --json              # JSON-formatted events
+julius-cli daemon --interval 15       # Poll every 15 seconds (default: 30)
+
+# Background — detached daemon with PID file
+julius-cli daemon start
+julius-cli daemon stop
+julius-cli daemon status
+```
+
+The daemon monitors all sessions and sends **system notifications** (via `node-notifier`) for:
+- **State changes** — any session state transition
+- **Needs approval** — when a session is awaiting plan approval
+- **New messages** — agent responses in active sessions
+- **Completion/Failure** — terminal state reached
+- **Errors** — polling failures (daemon auto-stops after 10 consecutive errors)
+
+Configuration (`~/.config/julius-cli/config.json`):
+```json
+{
+  "daemon": {
+    "pollInterval": 30000,
+    "notifications": ["system", "agent"]
+  }
+}
+```
+
 ### Sessions
 
 ```bash
-# Create a new session (auto-infers provider from git)
+# Create a new session (auto-infers provider from git remote)
+# --repo format: [provider/]owner/repo (e.g., github/myorg/myrepo)
 julius-cli sessions create \
   --repo owner/repo \
   --prompt "Your task description" \
@@ -176,8 +214,11 @@ julius-cli sessions list \
 # Get session details
 julius-cli sessions get <session-id>
 
-# Pull session changes (now supports MR/PR formats like pr/123)
+# Pull session changes (supports MR/PR formats like pr/123)
 julius-cli sessions pull <session-id>
+
+# Show local diff of session's proposed changes
+julius-cli sessions diff <session-id>
 ```
 
 ### Wait/Poll
@@ -188,6 +229,52 @@ julius-cli wait <session-id>
 
 # Block and stream real-time activity updates
 julius-cli wait <session-id> --follow
+
+# Wait for multiple sessions simultaneously
+julius-cli wait <session-id-1> <session-id-2> <session-id-3>
+
+# Wait for a specific state with activity type filtering
+julius-cli wait <session-id> --state AWAITING_APPROVAL --activity-type PLAN MESSAGE
+```
+
+### Batch Operations
+
+Create, cancel, or inspect multiple sessions at once (v0.8.0+).
+
+```bash
+# Batch create from JSON file
+julius-cli sessions batch-create ./tasks.json
+
+# Batch create from text file (one prompt per line, # for comments)
+julius-cli sessions batch-create ./prompts.txt --repo owner/repo --title-prefix "Sprint-42"
+
+# Batch create and wait for all to complete
+julius-cli sessions batch-create ./tasks.json --wait
+
+# Control parallelism (default: 5, max: 20)
+julius-cli sessions batch-create ./tasks.json --concurrency 10
+
+# Cancel multiple sessions
+julius-cli sessions batch-cancel session-id-1 session-id-2 session-id-3
+
+# Inspect branch info for multiple completed sessions
+julius-cli sessions batch-pull session-id-1 session-id-2
+```
+
+JSON batch file format:
+```json
+[
+  { "prompt": "Fix the auth bug", "repo": "owner/repo", "title": "Auth fix", "autoPr": true },
+  { "prompt": "Add dark mode", "repo": "owner/repo", "requireApproval": true }
+]
+```
+
+Text batch file format (one prompt per line, `#` for comments):
+```
+# Sprint 42 tasks
+Fix the auth bug
+Add dark mode support
+Refactor error handling
 ```
 
 ### Configuration
@@ -201,6 +288,21 @@ julius-cli config get defaultFormat
 
 # List all configuration values
 julius-cli config list
+```
+
+### Shell Completion 🆕
+
+Generate shell completion scripts for bash and zsh (v0.7.1+):
+
+```bash
+# Generate bash completion
+julius-cli completion bash
+
+# Generate zsh completion
+julius-cli completion zsh
+
+# Source directly (bash example)
+source <(julius-cli completion bash)
 ```
 
 ## Output Formats

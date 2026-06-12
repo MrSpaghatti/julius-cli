@@ -14,6 +14,7 @@ import { fetchAllPages } from '../utils/pagination.js';
 import { getClient } from '../utils/client.js';
 import { createSession } from '../services/sessionService.js';
 import { waitCommand } from './wait.js';
+import { createSessionsBatchCommands } from './sessions-batch.js';
 import type { OutputFormat } from '../cli/types.js';
 import type { CreateSessionParams } from '../services/sessionService.js';
 
@@ -73,6 +74,7 @@ export function createSessionsCommands(): Command {
     .description('List sessions')
     .option('--repo <repo>', 'Filter by repository (owner/repo)')
     .option('--state <states...>', 'Filter by state(s)')
+    .option('--creator <creator>', 'Filter by creator email')
     .option(
       '--page-size <n>',
       'Results per page (max 100)',
@@ -92,6 +94,7 @@ export function createSessionsCommands(): Command {
       async (options: {
         repo?: string;
         state?: string[];
+        creator?: string;
         pageSize: string;
         pageToken?: string;
         all?: boolean;
@@ -142,6 +145,9 @@ export function createSessionsCommands(): Command {
             .map((s) => `state = "${s}"`)
             .join(' OR ');
           filters.push(`(${stateFilters})`);
+        }
+        if (options.creator) {
+          filters.push(`creator = "${options.creator}"`);
         }
         const filter = filters.length > 0 ? filters.join(' AND ') : undefined;
 
@@ -317,6 +323,10 @@ export function createSessionsCommands(): Command {
 
       pullSessionChanges(repo, branchName);
     });
+
+  for (const cmd of createSessionsBatchCommands()) {
+    sessions.addCommand(cmd);
+  }
 
   sessions
     .command('diff')

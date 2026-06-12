@@ -1,211 +1,253 @@
-import crypto from 'node:crypto';
-import http from 'node:http';
-import { spawn } from 'node:child_process';
-import { OAuth2Client } from 'google-auth-library';
-import { Output } from '../output/manager.js';
+import crypto from "node:crypto";
+import http from "node:http";
+import { spawn } from "node:child_process";
+import { OAuth2Client, CodeChallengeMethod } from "google-auth-library";
+import { Output } from "../output/manager.js";
 
 export interface OAuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number; // unix ms
-  email?: string; // from id_token if present
+	accessToken: string;
+	refreshToken: string;
+	expiresAt: number; // unix ms
+	email?: string; // from id_token if present
 }
 
 /**
  * Generate PKCE code verifier and challenge
  */
 export function generatePKCE() {
-  const verifier = crypto.randomBytes(32).toString('base64url');
-  const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
-  return { verifier, challenge };
+	const verifier = crypto.randomBytes(32).toString("base64url");
+	const challenge = crypto
+		.createHash("sha256")
+		.update(verifier)
+		.digest("base64url");
+	return { verifier, challenge };
 }
 
 /**
  * Open a URL in the default browser
  */
 async function openBrowser(url: string): Promise<void> {
-  const OPEN_COMMANDS: Record<string, string> = {
-    darwin: 'open',
-    win32: 'start',
-  };
-  const start = OPEN_COMMANDS[process.platform] ?? 'xdg-open';
-  spawn(start, [url], { shell: true }).unref();
+	const OPEN_COMMANDS: Record<string, string> = {
+		darwin: "open",
+		win32: "start",
+	};
+	const start = OPEN_COMMANDS[process.platform] ?? "xdg-open";
+	spawn(start, [url], { shell: true }).unref();
 }
 
 /**
  * Run the browser-based OAuth flow with PKCE
  */
 export async function runBrowserOAuthFlow(
-  clientId: string,
-  clientSecret: string,
-  scopes: string[]
+	clientId: string,
+	clientSecret: string,
+	scopes: string[],
 ): Promise<OAuthTokens> {
-  const { verifier, challenge } = generatePKCE();
-  const state = crypto.randomBytes(16).toString('hex');
+	const { verifier, challenge } = generatePKCE();
+	const state = crypto.randomBytes(16).toString("hex");
 
-  return new Promise((resolve, reject) => {
-    const server = http.createServer();
-    
-    // Safety: 5 minute timeout
-    const timeout = setTimeout(() => {
-      server.close();
-      reject(new Error('Authentication timed out after 5 minutes'));
-    }, 5 * 60 * 1000);
+	return new Promise((resolve, reject) => {
+		const server = http.createServer();
 
-    const cleanup = () => {
-      clearTimeout(timeout);
-      process.removeListener('SIGINT', cleanup);
-      server.close();
-    };
+		// Safety: 5 minute timeout
+		const timeout = setTimeout(
+			() => {
+				server.close();
+				reject(new Error("Authentication timed out after 5 minutes"));
+			},
+			5 * 60 * 1000,
+		);
 
-    process.on('SIGINT', cleanup);
+		const cleanup = () => {
+			clearTimeout(timeout);
+			process.removeListener("SIGINT", cleanup);
+			server.close();
+		};
 
-    server.on('request', async (req, res) => {
-      try {
-        const url = new URL(req.url!, `http://${req.headers.host}`);
-        const code = url.searchParams.get('code');
-        const returnedState = url.searchParams.get('state');
+		process.on("SIGINT", cleanup);
 
-        if (returnedState !== state) {
-          throw new Error('State mismatch');
-        }
+		server.on("request", async (req, res) => {
+			try {
+				const url = new URL(req.url!, `http://${req.headers.host}`);
+				const code = url.searchParams.get("code");
+				const returnedState = url.searchParams.get("state");
 
-        if (!code) {
-          throw new Error('No code returned');
-        }
+				if (returnedState !== state) {
+					throw new Error("State mismatch");
+				}
 
-        const address = server.address();
-        if (!address || typeof address === 'string') {
-          throw new Error('Could not determine local server address');
-        }
-        const redirectUri = `http://127.0.0.1:${address.port}`;
-        const oauth2Client = new OAuth2Client(clientId, clientSecret, redirectUri);
-        
-        const { tokens } = await oauth2Client.getToken({
-          code,
-          codeVerifier: verifier,
-        });
+				if (!code) {
+					throw new Error("No code returned");
+				}
 
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end('<h1>Authentication successful!</h1><p>You can close this window now.</p>');
-        cleanup();
+				const address = server.address();
+				if (!address || typeof address === "string") {
+					throw new Error("Could not determine local server address");
+				}
+				const redirectUri = `http://127.0.0.1:${address.port}`;
+				const oauth2Client = new OAuth2Client(
+					clientId,
+					clientSecret,
+					redirectUri,
+				);
 
-        resolve({
-          accessToken: tokens.access_token!,
-          refreshToken: tokens.refresh_token!,
-          expiresAt: tokens.expiry_date!,
-        });
-      } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'text/html' });
-        res.end(`<h1>Authentication failed</h1><p>${(err as Error).message}</p>`);
-        cleanup();
-        reject(err);
-      }
-    });
+				const { tokens } = await oauth2Client.getToken({
+					code,
+					codeVerifier: verifier,
+				});
 
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-      if (!address || typeof address === 'string') {
-        reject(new Error('Could not determine local server address'));
-        return;
-      }
-      const port = address.port;
-      const redirectUri = `http://127.0.0.1:${port}`;
+				res.writeHead(200, { "Content-Type": "text/html" });
+				res.end(
+					"<h1>Authentication successful!</h1><p>You can close this window now.</p>",
+				);
+				cleanup();
 
-      const oauth2Client = new OAuth2Client(clientId, clientSecret, redirectUri);
-      const authorizeUrl = oauth2Client.generateAuthUrl({
-        access_type: 'offline',
-        scope: scopes,
-        state,
-        code_challenge: challenge,
-        code_challenge_method: 'S256' as any,
-      });
+				resolve({
+					accessToken: tokens.access_token!,
+					refreshToken: tokens.refresh_token!,
+					expiresAt: tokens.expiry_date!,
+				});
+			} catch (err) {
+				res.writeHead(500, { "Content-Type": "text/html" });
+				res.end(
+					`<h1>Authentication failed</h1><p>${(err as Error).message}</p>`,
+				);
+				cleanup();
+				reject(err);
+			}
+		});
 
-  Output.info('Opening browser for authentication...');
-      openBrowser(authorizeUrl);
-    });
-  });
+		server.listen(0, "127.0.0.1", () => {
+			const address = server.address();
+			if (!address || typeof address === "string") {
+				reject(new Error("Could not determine local server address"));
+				return;
+			}
+			const port = address.port;
+			const redirectUri = `http://127.0.0.1:${port}`;
+
+			const oauth2Client = new OAuth2Client(
+				clientId,
+				clientSecret,
+				redirectUri,
+			);
+			const authorizeUrl = oauth2Client.generateAuthUrl({
+				access_type: "offline",
+				scope: scopes,
+				state,
+				code_challenge: challenge,
+				code_challenge_method: CodeChallengeMethod.S256,
+			});
+
+			Output.info("Opening browser for authentication...");
+			openBrowser(authorizeUrl);
+		});
+	});
 }
 
 /**
  * Run the device code flow
  */
-export async function runDeviceCodeFlow(clientId: string, scopes: string[]): Promise<OAuthTokens> {
-  const response = await fetch('https://oauth2.googleapis.com/device/code', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: clientId,
-      scope: scopes.join(' '),
-    }),
-  });
+export async function runDeviceCodeFlow(
+	clientId: string,
+	scopes: string[],
+): Promise<OAuthTokens> {
+	const response = await fetch("https://oauth2.googleapis.com/device/code", {
+		method: "POST",
+		headers: { "Content-Type": "application/x-www-form-urlencoded" },
+		body: new URLSearchParams({
+			client_id: clientId,
+			scope: scopes.join(" "),
+		}),
+	});
 
-  const data = (await response.json()) as any;
-  if (!response.ok) {
-    throw new Error(`Device code request failed: ${JSON.stringify(data)}`);
-  }
+	const data = (await response.json()) as Record<string, unknown>;
+	if (!response.ok) {
+		throw new Error(`Device code request failed: ${JSON.stringify(data)}`);
+	}
 
-  const { device_code, user_code, verification_url, interval, expires_in } = data;
+	const { device_code, user_code, verification_url, interval, expires_in } =
+		data as unknown as {
+			device_code: string;
+			user_code: string;
+			verification_url: string;
+			interval?: number;
+			expires_in: number;
+		};
 
-  Output.info(`\n1. Visit: ${verification_url}`);
-  Output.info(`2. Enter code: ${user_code}\n`);
+	Output.info(`\n1. Visit: ${verification_url}`);
+	Output.info(`2. Enter code: ${user_code}\n`);
 
-  const pollInterval = (interval || 5) * 1000;
-  const stopTime = Date.now() + expires_in * 1000;
+	const pollInterval = (interval || 5) * 1000;
+	const stopTime = Date.now() + expires_in * 1000;
 
-  return new Promise((resolve, reject) => {
-    const poll = async () => {
-      if (Date.now() > stopTime) {
-        reject(new Error('Device code expired'));
-        return;
-      }
+	return new Promise((resolve, reject) => {
+		const poll = async () => {
+			if (Date.now() > stopTime) {
+				reject(new Error("Device code expired"));
+				return;
+			}
 
-      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          client_id: clientId,
-          device_code,
-          grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-        }),
-      });
+			const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+				method: "POST",
+				headers: { "Content-Type": "application/x-www-form-urlencoded" },
+				body: new URLSearchParams({
+					client_id: clientId,
+					device_code,
+					grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+				}),
+			});
 
-      const tokenData = (await tokenResponse.json()) as any;
+			interface TokenResponse {
+				access_token: string;
+				refresh_token: string;
+				expires_in: number;
+				error?: string;
+				error_description?: string;
+				interval?: number;
+			}
 
-      if (tokenResponse.ok) {
-        resolve({
-          accessToken: tokenData.access_token,
-          refreshToken: tokenData.refresh_token,
-          expiresAt: Date.now() + tokenData.expires_in * 1000,
-        });
-      } else if (tokenData.error === 'authorization_pending') {
-        setTimeout(poll, pollInterval);
-      } else if (tokenData.error === 'slow_down') {
-        const newInterval = (tokenData.interval || (pollInterval / 1000) + 5) * 1000;
-        setTimeout(poll, newInterval);
-      } else {
-        reject(new Error(`Token exchange failed: ${tokenData.error_description || tokenData.error}`));
-      }
-    };
+			const tokenData = (await tokenResponse.json()) as TokenResponse;
 
-    setTimeout(poll, pollInterval);
-  });
+			if (tokenResponse.ok) {
+				resolve({
+					accessToken: tokenData.access_token,
+					refreshToken: tokenData.refresh_token,
+					expiresAt: Date.now() + tokenData.expires_in * 1000,
+				});
+			} else if (tokenData.error === "authorization_pending") {
+				setTimeout(poll, pollInterval);
+			} else if (tokenData.error === "slow_down") {
+				const newInterval =
+					(tokenData.interval || pollInterval / 1000 + 5) * 1000;
+				setTimeout(poll, newInterval);
+			} else {
+				reject(
+					new Error(
+						`Token exchange failed: ${tokenData.error_description || tokenData.error}`,
+					),
+				);
+			}
+		};
+
+		setTimeout(poll, pollInterval);
+	});
 }
 
 /**
  * Refresh an access token
  */
 export async function refreshAccessToken(
-  clientId: string,
-  clientSecret: string,
-  refreshToken: string
+	clientId: string,
+	clientSecret: string,
+	refreshToken: string,
 ): Promise<{ accessToken: string; expiresAt: number }> {
-  const oauth2Client = new OAuth2Client(clientId, clientSecret);
-  oauth2Client.setCredentials({ refresh_token: refreshToken });
-  
-  const { credentials } = await oauth2Client.refreshAccessToken();
-  return {
-    accessToken: credentials.access_token!,
-    expiresAt: credentials.expiry_date!,
-  };
+	const oauth2Client = new OAuth2Client(clientId, clientSecret);
+	oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+	const { credentials } = await oauth2Client.refreshAccessToken();
+	return {
+		accessToken: credentials.access_token!,
+		expiresAt: credentials.expiry_date!,
+	};
 }
