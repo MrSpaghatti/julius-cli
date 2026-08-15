@@ -1,4 +1,12 @@
 import { Command } from 'commander';
+import { createRequire } from 'node:module';
+
+// Read the version from package.json at runtime so it can never drift from
+// the published package. Works in the bundled ESM (tsup shims require) and
+// under jest's ESM loader, which rejects named imports from JSON modules.
+const require = createRequire(import.meta.url);
+const { version } = require('../package.json') as { version: string };
+
 import { createAuthCommands } from './commands/auth.js';
 import { createSourcesCommands } from './commands/sources.js';
 import { createSessionsCommands } from './commands/sessions.js';
@@ -42,7 +50,7 @@ const interactiveCommandNames = createCommandRegistry([
 cli
   .name('julius-cli')
   .description('AI-first CLI for Jules REST API with JSON output and full automation support')
-  .version('0.7.0');
+  .version(version);
 
 // Global options
 cli.option('--verbose', 'Enable verbose logging');
