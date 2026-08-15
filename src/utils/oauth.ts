@@ -140,6 +140,7 @@ export async function runBrowserOAuthFlow(
 			});
 
 			Output.info("Opening browser for authentication...");
+			Output.info(`Authorize URL: ${authorizeUrl}`);
 			openBrowser(authorizeUrl);
 		});
 	});
