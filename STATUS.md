@@ -1,8 +1,8 @@
 # Julius CLI Status
 
-**Version:** 0.8.0
+**Version:** 0.9.0
 **Status:** In Active Development
-**Last Updated:** 2026-06-11
+**Last Updated:** 2026-08-14
 **Lint cleanup:** 52 `no-explicit-any` → 0, 4 unused-import errors → 0
 
 ## Overview
@@ -19,7 +19,7 @@ Julius CLI is an AI-first command-line tool for the Jules REST API. It provides 
   - Output abstraction (OutputChannel) with CLI and Null implementations
   - Discriminated-union formatter (FormattedOutput)
   - React Ink TUI dashboard with session list, activity stream, chat panel, create dialog
-  - TUI features: repo filtering, plan approval, session cancellation, state filtering
+  - TUI features: repo filtering, creator filtering, quick search, plan approval, session cancellation, multi-select batch ops (space to select), state filtering
   - Multi-provider support: GitHub, GitLab, Bitbucket
   - API key + Google OAuth 2.0 (Web + Device Flow) authentication
   - Webhook server for real-time session events

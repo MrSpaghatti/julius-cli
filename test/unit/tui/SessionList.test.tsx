@@ -38,7 +38,7 @@ describe('SessionList', () => {
       React.createElement(SessionList, { sessions, selectedIndex: 0, loading: false })
     );
     const frame = lastFrame()!;
-    expect(frame).toContain('session-very');
+    expect(frame).toContain('session-ver');
     expect(frame).toContain('PENDING');
   });
 
@@ -50,8 +50,8 @@ describe('SessionList', () => {
     const { lastFrame } = render(
       React.createElement(SessionList, { sessions, selectedIndex: 1, loading: false })
     );
-    // IDs are truncated to 12 chars by the component
-    expect(lastFrame()).toContain('second-sessi');
+    // IDs are truncated to 11 chars by the component
+    expect(lastFrame()).toContain('second-sess');
   });
 
   it('shows state icons and repo names', () => {
@@ -65,5 +65,34 @@ describe('SessionList', () => {
     expect(frame).toContain('facebook/react');
     expect(frame).toContain('COMPLETED');
     expect(frame).toContain('\u2713');
+  });
+
+  it('marks sessions present in selectedIds with a filled bullet', () => {
+    const sessions = [
+      makeSession({ id: 'checked-session-id' }),
+      makeSession({ id: 'unchecked-session-id' }),
+    ];
+    const { lastFrame } = render(
+      React.createElement(SessionList, {
+        sessions,
+        selectedIndex: 0,
+        loading: false,
+        selectedIds: new Set(['checked-session-id']),
+      })
+    );
+    const frame = lastFrame()!;
+    // Asterisk (\*) marks the selected row
+    expect(frame).toContain('*');
+    // Both rows still render
+    expect(frame).toContain('checked-se');
+    expect(frame).toContain('unchecked-');
+  });
+
+  it('defaults to no selections when selectedIds is omitted', () => {
+    const sessions = [makeSession({ id: 'plain-session-id' })];
+    const { lastFrame } = render(
+      React.createElement(SessionList, { sessions, selectedIndex: 0, loading: false })
+    );
+    expect(lastFrame()).toContain('plain-sess');
   });
 });

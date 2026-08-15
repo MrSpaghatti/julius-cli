@@ -67,9 +67,14 @@ A polished, production-ready CLI and TUI that serves as the primary daily driver
 
 None — v0.8.0 is complete ✅
 
-### Next (v0.9.0 Ideas)
+## v0.9.0 ✓ Completed
 
-- Session performance analytics (cost, duration, success rate)
+1. **TUI creator filter** — press `u` to filter sessions by creator email (server-side) ✅
+2. **TUI batch operations** — `space` multi-select, `p`/`x` act on the whole selection ✅
+
+### Next (v0.9.x / v0.10.0 Ideas)
+
+- Session performance analytics (cost, duration, success rate) — note: the API `Session` type currently exposes no cost field, so cost needs to be derived externally or waited on
 - Cost and quota monitoring tools
-- TUI enhancements: creator filter display, batch operations in TUI
+- Batch operations in the CLI (`sessions batch-*` already exists) — TUI select-all
 - Automated E2E tests with live API

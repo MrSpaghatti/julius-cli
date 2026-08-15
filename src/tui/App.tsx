@@ -34,6 +34,9 @@ export function App(): React.ReactNode {
 	const [showRepoFilter, setShowRepoFilter] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [showSearch, setShowSearch] = useState(false);
+	const [creatorFilter, setCreatorFilter] = useState("");
+	const [showCreatorFilter, setShowCreatorFilter] = useState(false);
+	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
 	const fetchSessions = useCallback(async () => {
 		try {
@@ -49,6 +52,9 @@ export function App(): React.ReactNode {
 					: `github/${repoFilter}`;
 				filters.push(`source = "sources/${parts}"`);
 			}
+			if (creatorFilter) {
+				filters.push(`creator = "${creatorFilter}"`);
+			}
 			const filter = filters.length > 0 ? filters.join(" AND ") : undefined;
 			const result = await api.list(30, undefined, filter);
 			if (result?.items) {
@@ -60,7 +66,7 @@ export function App(): React.ReactNode {
 		} finally {
 			setLoading(false);
 		}
-	}, [filterState, repoFilter]);
+	}, [filterState, repoFilter, creatorFilter]);
 
 	const fetchActivities = useCallback(async (sessionId: string) => {
 		setActivitiesLoading(true);
@@ -126,6 +132,19 @@ export function App(): React.ReactNode {
 			return;
 		}
 
+		if (showCreatorFilter) {
+			if (key.escape) {
+				setShowCreatorFilter(false);
+				setCreatorFilter("");
+			}
+			return;
+		}
+
+		if (key.escape && selectedIds.size > 0) {
+			setSelectedIds(new Set());
+			return;
+		}
+
 		if (input === "q") {
 			exit();
 			return;
@@ -149,35 +168,47 @@ export function App(): React.ReactNode {
 			return;
 		}
 
+		if (input === " ") {
+			const sel = filteredSessions[safeIndex];
+			if (sel) {
+				setSelectedIds((prev) => {
+					const next = new Set(prev);
+					if (next.has(sel.id)) {
+						next.delete(sel.id);
+					} else {
+						next.add(sel.id);
+					}
+					return next;
+				});
+			}
+			return;
+		}
+
 		if (input === "/") {
 			setShowSearch(true);
 			setSearchQuery("");
+			setSelectedIds(new Set());
 			return;
 		}
 
 		if (input === "r") {
 			setShowRepoFilter(true);
+			setSelectedIds(new Set());
+			return;
+		}
+
+		if (input === "u") {
+			setShowCreatorFilter(true);
 			return;
 		}
 
 		if (input === "p") {
-			const session = sessions[selectedIndex];
-			if (session && session.state === "AWAITING_APPROVAL") {
-				handleApprove();
-			}
+			handleApprove();
 			return;
 		}
 
 		if (input === "x") {
-			const session = sessions[selectedIndex];
-			if (
-				session &&
-				session.state !== "COMPLETED" &&
-				session.state !== "FAILED" &&
-				session.state !== "CANCELLED"
-			) {
-				handleCancel();
-			}
+			handleCancel();
 			return;
 		}
 
@@ -224,30 +255,59 @@ export function App(): React.ReactNode {
 	}, []);
 
 	const handleApprove = useCallback(async () => {
-		const session = sessions[selectedIndex];
-		if (!session || session.state !== "AWAITING_APPROVAL") return;
-		try {
-			const client = await getClient();
-			const api = new SessionsAPI(client);
-			await api.approvePlan(session.id);
-			await fetchSessions();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to approve plan");
-		}
-	}, [selectedIndex, sessions, fetchSessions]);
+			const selected = selectedIds.size > 0
+				? sessions.filter((s) => selectedIds.has(s.id))
+				: [sessions[selectedIndex]].filter((s): s is Session => !!s);
+			const targets = selected.filter(
+				(s) => s.state === "AWAITING_APPROVAL",
+			);
+			if (targets.length === 0) {
+				setError(
+					selectedIds.size > 0
+						? "No selected session is awaiting approval"
+						: "Session is not awaiting approval",
+				);
+				return;
+			}
+			try {
+				const client = await getClient();
+				const api = new SessionsAPI(client);
+				await Promise.all(targets.map((t) => api.approvePlan(t.id)));
+				setSelectedIds(new Set());
+				await fetchSessions();
+			} catch (err) {
+				setError(err instanceof Error ? err.message : "Failed to approve plan");
+			}
+		}, [selectedIndex, sessions, selectedIds, fetchSessions]);
 
 	const handleCancel = useCallback(async () => {
-		const session = sessions[selectedIndex];
-		if (!session) return;
-		try {
-			const client = await getClient();
-			const api = new SessionsAPI(client);
-			await api.cancel(session.id);
-			await fetchSessions();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to cancel session");
-		}
-	}, [selectedIndex, sessions, fetchSessions]);
+			const selected = selectedIds.size > 0
+				? sessions.filter((s) => selectedIds.has(s.id))
+				: [sessions[selectedIndex]].filter((s): s is Session => !!s);
+			const targets = selected.filter(
+				(s) =>
+					s.state !== "COMPLETED" &&
+					s.state !== "FAILED" &&
+					s.state !== "CANCELLED",
+			);
+			if (targets.length === 0) {
+				setError(
+					selectedIds.size > 0
+						? "No selected session is cancelable"
+						: "Session is not cancelable",
+				);
+				return;
+			}
+			try {
+				const client = await getClient();
+				const api = new SessionsAPI(client);
+				await Promise.all(targets.map((t) => api.cancel(t.id)));
+				setSelectedIds(new Set());
+				await fetchSessions();
+			} catch (err) {
+				setError(err instanceof Error ? err.message : "Failed to cancel session");
+			}
+		}, [selectedIndex, sessions, selectedIds, fetchSessions]);
 
 	const filteredSessions = searchQuery
 		? sessions.filter((s) => {
@@ -334,6 +394,38 @@ export function App(): React.ReactNode {
 				</Box>
 			)}
 
+			{showCreatorFilter && (
+				<Box paddingX={1} paddingY={0}>
+					<Text bold color="cyan">
+						Creator filter:{" "}
+					</Text>
+					<Box flexGrow={1}>
+						<TextInput
+							value={creatorFilter}
+							onChange={setCreatorFilter}
+							onSubmit={(value) => {
+								setCreatorFilter(value);
+								setShowCreatorFilter(false);
+								setSelectedIndex(0);
+								fetchSessions();
+							}}
+							placeholder="creator email (Enter to apply, Esc to cancel)"
+						/>
+					</Box>
+				</Box>
+			)}
+
+			{creatorFilter && !showCreatorFilter && (
+				<Box paddingX={1}>
+					<Text color="cyan">Filter: creator={creatorFilter}</Text>
+					<Box marginLeft={1}>
+						<Text color="gray" dimColor>
+							(u to change)
+						</Text>
+					</Box>
+				</Box>
+			)}
+
 			{showSearch && (
 				<Box paddingX={1} paddingY={0}>
 					<Text bold color="yellow">
@@ -354,11 +446,15 @@ export function App(): React.ReactNode {
 					<Box paddingX={1}>
 						<Text bold>Sessions</Text>
 						<Text color="gray"> ({filteredSessions.length})</Text>
+						{selectedIds.size > 0 && (
+							<Text color="magenta"> • {selectedIds.size} selected</Text>
+						)}
 					</Box>
 					<Box flexGrow={1}>
 						<SessionList
 							sessions={filteredSessions}
 							selectedIndex={selectedIndex}
+							selectedIds={selectedIds}
 							loading={loading}
 						/>
 					</Box>
@@ -490,32 +586,38 @@ export function App(): React.ReactNode {
 				) : showSearch ? (
 					<Text color="yellow">Searching — Esc to cancel</Text>
 				) : (
-					<>
-						<Text color="gray">↑↓ Navigate</Text>
-						<ColorDivider />
-						<Text color="gray">/ Search</Text>
-						<ColorDivider />
-						<Text color="gray">Enter Chat</Text>
-						<ColorDivider />
-						<Text color="gray">r Filter Repo</Text>
-						<ColorDivider />
-						<Text color="gray">p Approve</Text>
-						<ColorDivider />
-						<Text color="gray">x Cancel</Text>
-						<ColorDivider />
-						<Text color="gray">c Create</Text>
-						<ColorDivider />
-						<Text color="gray">a All</Text>
-						<ColorDivider />
-						<Text color="gray">1-7 Filter State</Text>
-						<ColorDivider />
-						<Text color="gray">q Quit</Text>
-						<Box marginLeft={2}>
-							<Text color="gray" dimColor>
-								{new Date().toLocaleTimeString()}
-							</Text>
+					<Box flexDirection="column">
+						<Box>
+							<Text color="gray">↑↓ Navigate</Text>
+							<ColorDivider />
+							<Text color="gray">/ Search</Text>
+							<ColorDivider />
+							<Text color="gray">Enter Chat</Text>
+							<ColorDivider />
+							<Text color="gray">space Select</Text>
+							<ColorDivider />
+							{selectedIds.size > 0 ? (
+								<Text color="green">
+									p/x Batch ({selectedIds.size})
+								</Text>
+							) : (
+								<Text color="gray">p/x Batch</Text>
+							)}
 						</Box>
-					</>
+						<Box>
+							<Text color="gray">r Filter Repo</Text>
+							<ColorDivider />
+							<Text color="gray">u Filter Creator</Text>
+							<ColorDivider />
+							<Text color="gray">c Create</Text>
+							<ColorDivider />
+							<Text color="gray">a All</Text>
+							<ColorDivider />
+							<Text color="gray">1-7 Filter State</Text>
+							<ColorDivider />
+							<Text color="gray">q Quit</Text>
+						</Box>
+					</Box>
 				)}
 			</Box>
 		</Box>

@@ -7,9 +7,15 @@ interface SessionListProps {
   sessions: Session[];
   selectedIndex: number;
   loading: boolean;
+  selectedIds?: Set<string>;
 }
 
-export function SessionList({ sessions, selectedIndex, loading }: SessionListProps) {
+export function SessionList({
+  sessions,
+  selectedIndex,
+  loading,
+  selectedIds = new Set<string>(),
+}: SessionListProps) {
   if (loading && sessions.length === 0) {
     return (
       <Box paddingX={1} paddingY={1}>
@@ -30,6 +36,7 @@ export function SessionList({ sessions, selectedIndex, loading }: SessionListPro
     <Box flexDirection="column">
       {sessions.slice(0, 50).map((session, index) => {
         const isSelected = index === selectedIndex;
+        const isChecked = selectedIds.has(session.id);
         const stateColor = getStateColor(session.state);
         const icon = getStateIcon(session.state);
         const repo = extractRepo(session.sourceContext);
@@ -40,10 +47,15 @@ export function SessionList({ sessions, selectedIndex, loading }: SessionListPro
             paddingX={1}
             backgroundColor={isSelected ? 'blue' : undefined}
           >
+            <Box width={1}>
+              <Text color={isChecked ? 'green' : 'gray'}>
+                {isChecked ? '*' : ' '}
+              </Text>
+            </Box>
             <Text color={stateColor}>{icon}</Text>
             <Box marginLeft={1} flexGrow={1}>
               <Text bold={isSelected} color={isSelected ? 'white' : undefined}>
-                {session.id.slice(0, 12)}
+                {session.id.slice(0, 11)}
               </Text>
             </Box>
             <Box width={12}>

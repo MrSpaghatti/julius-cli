@@ -1,4 +1,4 @@
-# julius-cli v0.8.0
+# julius-cli v0.9.0
 
 AI-first CLI for Jules REST API with JSON output and full automation support.
 
@@ -100,7 +100,10 @@ The TUI dashboard features:
 - **Session creation** — press `c` to create a new session with prompt, repo, and title
 - **Approve plans** — approve sessions awaiting plan review inline
 - **Cancel sessions** — cancel active sessions from the dashboard
-- **Repo filter** — press `/` to filter sessions by repository name
+- **Multi-select batch ops (v0.9.0)** — press `space` to toggle selection on a row, then `p`/`x` act on all selected instead of the single row
+- **Repo filter** — press `r` to filter sessions by repository name
+- **Creator filter (v0.9.0)** — press `u` to filter sessions by creator email
+- **Search** — press `/` to search sessions by repo, title, or ID (client-side)
 - **State filtering** — press `1-7` to filter sessions by state (PENDING→CANCELLED), `a` for all
 - **Keyboard navigation** — `↑↓` to select, `Enter` for chat, `q` to quit
 

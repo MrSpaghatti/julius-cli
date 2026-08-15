@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] - 2026-08-14
+
+### Added
+- **TUI multi-select batch operations** — press `space` to toggle selection on a session row (marked with `*`); with selections active, `p`/`x` approve/cancel the whole selection instead of the single highlighted row. Selection count shows in the sessions header and status bar.
+- **TUI creator filter** — press `u` to filter the session list by creator email (server-side `creator = "..."` expression, mirroring the CLI `--creator` flag). Active filter shows as `Filter: creator=...`.
+
+### Changed
+- **TUI status bar** — reorganized onto two lines so keyboard hints never split mid-word on narrow terminals; dropped the redundant live clock.
+
+## [0.8.0] - 2026-06-11
+
+### Added
+- **npm publishing** — verified publish config, `release.yml`, `.npmignore`.
+- **TUI quick search** — `/` to search sessions by repo, title, or ID (client-side).
+- **CLI `--creator` filter** — pass through to the API filter on `sessions list`.
+- **Cross-platform CI** — test on macOS/Windows/Linux with Node 18/20/22.
+- **Batch orchestration** — `sessions batch-create`, `batch-cancel`, `batch-pull`.
+
 ## [0.7.0] - 2026-04-07
 
 ### Added
