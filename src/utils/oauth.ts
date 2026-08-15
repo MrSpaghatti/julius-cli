@@ -32,7 +32,10 @@ async function openBrowser(url: string): Promise<void> {
 		win32: "start",
 	};
 	const start = OPEN_COMMANDS[process.platform] ?? "xdg-open";
-	spawn(start, [url], { shell: true }).unref();
+	// shell:true only on win32 where "start" is a cmd builtin. On POSIX,
+	// spawn the opener directly so args are never shell-concatenated (avoids
+	// the DEP0190 vulnerability warning for untrusted URLs).
+	spawn(start, [url], { shell: process.platform === "win32" }).unref();
 }
 
 /**
