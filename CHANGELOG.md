@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1] - 2026-08-16
+
+### Removed
+- **Google OAuth authentication** (`auth login`, browser and device-code flows). The Jules API authenticates exclusively with an `x-goog-api-key` header, so the OAuth path could never authenticate a request — every call 404'd with `Requested entity was not found`. Removed `src/utils/oauth.ts`, the `OAuthProvider` token provider, OAuth storage in config, and the `login` command; the CLI now resolves credentials via `JULES_API_KEY` env or `auth set <key>` only.
+
 ## [0.9.0] - 2026-08-14
 
 ### Added

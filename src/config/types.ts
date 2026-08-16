@@ -3,7 +3,7 @@ import type { OutputFormat } from '../cli/types.js';
 export interface CLIConfig {
   apiKey?: string;
   apiEndpoint?: string;
-  authMethod?: 'apikey' | 'oauth';
+  authMethod?: 'apikey';
   defaultFormat?: OutputFormat;
   defaultPageSize?: number;
   pollInterval?: number;

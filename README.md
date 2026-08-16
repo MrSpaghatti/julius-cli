@@ -351,19 +351,16 @@ julius-cli sessions list --state COMPLETED --all
 
 ## Authentication
 
-Three authentication methods are supported (v0.7.0+):
+Two methods of supplying credentials are supported:
 
 | Method | Command | Best for |
 |--------|---------|----------|
 | API Key | `auth set <key>` | Simple scripts, CI/CD with API key |
-| Google OAuth | `auth login` | Interactive use, Google account access |
-| Provider-specific | Env Variables | GitLab/Bitbucket specific token injection |
+| Provider-specific | Env Variables | GitHub/GitLab/Bitbucket token injection |
 
 Auth resolution order (highest priority first):
-1. `JULES_OAUTH_TOKEN` env var — direct OAuth Bearer token
-2. `JULES_API_KEY` env var — API key
-3. Stored OAuth tokens (from `auth login`)
-4. Stored API key (from `auth set`)
+1. `JULES_API_KEY` env var — API key
+2. Stored API key (from `auth set`)
 
 Additionally, provider-specific tokens can be set via environment variables:
 - `JULES_GITHUB_API_KEY`
@@ -377,11 +374,7 @@ Additionally, provider-specific tokens can be set via environment variables:
 julius-cli auth set YOUR_API_KEY
 julius-cli auth clear
 
-# Google OAuth
-julius-cli auth login                # browser flow
-julius-cli auth login --device-code  # headless / SSH
-
-# Check status (shows method, validity, user identity)
+# Check status (shows method, validity)
 julius-cli auth status
 julius-cli auth logout               # alias for auth clear
 ```
@@ -393,7 +386,6 @@ Configuration is stored in `~/.config/julius-cli/config.json` (or platform-speci
 You can also use environment variables:
 
 - `JULES_API_KEY` - API key (overrides stored key)
-- `JULES_OAUTH_TOKEN` - OAuth Bearer token (overrides all stored credentials)
 - `JULES_API_ENDPOINT` - API endpoint URL (default: https://jules.googleapis.com/v1alpha)
 
 ## Exit Codes

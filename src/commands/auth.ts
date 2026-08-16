@@ -1,13 +1,10 @@
 import { Command } from 'commander';
 import { config } from '../config/index.js';
 import { output } from '../output/formatter.js';
-import { AuthError, CLIError, ExitCode } from '../utils/errors.js';
+import { AuthError } from '../utils/errors.js';
 import { SourcesAPI } from '../api/sources.js';
 import type { OutputFormat } from '../cli/types.js';
 import { getClient } from '../utils/client.js';
-import { runBrowserOAuthFlow, runDeviceCodeFlow } from '../utils/oauth.js';
-
-const DEFAULT_SCOPES = ['https://www.googleapis.com/auth/cloud-platform'];
 
 export function createAuthCommands(): Command {
   const auth = new Command('auth').description('Manage authentication and API keys');
@@ -34,67 +31,6 @@ export function createAuthCommands(): Command {
     });
 
   auth
-    .command('login')
-    .description('Login via Google OAuth 2.0')
-    .option('--client-id <id>', 'OAuth client ID')
-    .option('--client-secret <secret>', 'OAuth client secret')
-    .option('--device-code', 'Use device code flow instead of browser flow')
-    .option('--scopes <scopes...>', 'OAuth scopes', DEFAULT_SCOPES)
-    .action(async (options: {
-      clientId?: string;
-      clientSecret?: string;
-      deviceCode?: boolean;
-      scopes: string[];
-    }) => {
-      const stored = await config.getOAuthClientCredentials();
-      const clientId =
-        options.clientId ||
-        process.env.JULES_GOOGLE_CLIENT_ID ||
-        stored.clientId;
-      const clientSecret =
-        options.clientSecret ||
-        process.env.JULES_GOOGLE_CLIENT_SECRET ||
-        stored.clientSecret;
-
-      if (!clientId) {
-        throw new CLIError(
-          'OAuth client ID is required. Provide it via --client-id, JULES_GOOGLE_CLIENT_ID env var, or by running login once with it.',
-          ExitCode.INVALID_ARGS
-        );
-      }
-
-      let tokens;
-      if (options.deviceCode) {
-        tokens = await runDeviceCodeFlow(clientId, options.scopes);
-      } else {
-        if (!clientSecret) {
-          throw new CLIError(
-            'OAuth client secret is required for browser flow. Provide it via --client-secret, JULES_GOOGLE_CLIENT_SECRET env var, or by running login once with it.',
-            ExitCode.INVALID_ARGS
-          );
-        }
-        tokens = await runBrowserOAuthFlow(clientId, clientSecret, options.scopes);
-      }
-
-      await config.setOAuthTokens(tokens);
-      config.setAuthMethod('oauth');
-      
-      // Store client credentials securely if provided, for future refreshes
-      if (clientId) {
-        await config.setOAuthClientCredentials(clientId, clientSecret || '');
-      }
-
-      output(
-        {
-          status: 'success',
-          message: 'OAuth login successful',
-          method: 'oauth',
-        },
-        'json'
-      );
-    });
-
-  auth
     .command('status')
     .description('Check if API key is configured and valid')
     .option('--format <format>', 'Output format (json|pretty|quiet)', 'json')
@@ -102,35 +38,27 @@ export function createAuthCommands(): Command {
       const authMethod = config.getAuthMethod();
       const endpoint = config.getApiEndpoint();
 
-        let client;
-        let authenticated = false;
-        let error = null;
-        let methodInfo: { method: string; expiresAt?: string } = { method: authMethod };
+      let authenticated = false;
+      let error = null;
+      const methodInfo: { method: string } = { method: authMethod };
 
-        try {
-          client = await getClient();
-          const api = new SourcesAPI(client);
-          await api.list(1); // Fetch just 1 item to verify authentication
-          authenticated = true;
-        } catch (err) {
-          error = err instanceof Error ? err.message : String(err);
-        }
+      try {
+        const client = await getClient();
+        const api = new SourcesAPI(client);
+        await api.list(1); // Fetch just 1 item to verify authentication
+        authenticated = true;
+      } catch (err) {
+        error = err instanceof Error ? err.message : String(err);
+      }
 
-       if (authMethod === 'oauth') {
-         const tokens = await config.getOAuthTokens();
-         if (tokens) {
-           methodInfo = { ...methodInfo, expiresAt: new Date(tokens.expiresAt).toISOString() };
-         }
-       }
-
-       output(
-         {
-           authenticated,
-           endpoint,
-           error,
-           ...methodInfo,
-           note: authenticated ? 'Credentials are valid.' : 'Credentials are present but invalid or API is unreachable.',
-         },
+      output(
+        {
+          authenticated,
+          endpoint,
+          error,
+          ...methodInfo,
+          note: authenticated ? 'Credentials are valid.' : 'Credentials are present but invalid or API is unreachable.',
+        },
         options.format
       );
     });
@@ -140,8 +68,6 @@ export function createAuthCommands(): Command {
     .description('Remove stored credentials')
     .action(async () => {
       await config.clearApiKey();
-      await config.clearOAuthTokens();
-      await config.clearOAuthClientCredentials();
       config.setAuthMethod('apikey');
 
       output(
@@ -158,8 +84,6 @@ export function createAuthCommands(): Command {
     .description('Remove stored credentials (alias for clear)')
     .action(async () => {
       await config.clearApiKey();
-      await config.clearOAuthTokens();
-      await config.clearOAuthClientCredentials();
       config.setAuthMethod('apikey');
 
       output(
