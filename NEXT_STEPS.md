@@ -76,6 +76,18 @@ None — v0.8.0 is complete ✅
 
 1. **`--notify` notifications on wait flows** — `julius-cli wait <id> --notify` (plus `sessions create --wait`, `batch-create --wait`, `templates use --wait`) fires a system notification on state change, completion, failure, approval-needed, and (with `--follow`) new agent messages. No more babysitting polls. ✅
 
+## v0.10.1 ✓ Completed
+
+1. **Activity wire-format mapping (critical)** — the API's one-of event objects
+   (`agentMessaged`/`userMessaged`/`planGenerated`/`planApproved`/
+   `progressUpdated`/`sessionCompleted`/`sessionFailed` + `originator`) are now
+   mapped to the typed flat model in `ActivitiesAPI.list()`/`get()`. This fixes
+   `--notify --follow` never pinging on agent messages and pretty-mode crashing
+   per activity. ✅
+2. **Audit items 2–7** — terminal-on-attach notify, CANCELLED terminal handling,
+   completed toast includes outputs, notify try/catch (headless-safe),
+   burst-batched toasts, key-source in auth error. ✅
+
 ### Next (v0.11.0 Ideas)
 
 - Session performance analytics (cost, duration, success rate) — note: the API `Session` type currently exposes no cost field, so cost needs to be derived externally or waited on

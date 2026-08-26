@@ -2,6 +2,50 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.1] - 2026-08-26
+
+### Fixed — activity wire-format mismatch (critical, audit #1/#8)
+
+The API returns activities as **one-of event objects** (exactly one of
+`agentMessaged` / `userMessaged` / `planGenerated` / `planApproved` /
+`progressUpdated` / `sessionCompleted` / `sessionFailed` populated, plus
+`originator`), but the CLI typed them as a flat `{type, author, content, …}`.
+Consequences fixed:
+
+- **`--notify --follow` never pinged on agent messages** — the mapped
+  `author === "AGENT" && type === "MESSAGE"` check is now true against real
+  data, so agent questions ("should I continue?") actually surface.
+- **Pretty-mode `--follow` crashed per activity** (`content` undefined) and
+  the error was swallowed — "streams little until the very end". Pretty output
+  now renders plan steps, user/agent badges, progress rows.
+- New `mapRawActivity()` mapping layer in `ActivitiesAPI.list()`/`get()`;
+  `ActivityType` extended with `COMPLETED` / `FAILED`.
+- Fixture tests added from real API output (session 8069486286309362531).
+
+### Fixed — audit items 2–7
+
+- **Notify when attaching to an already-terminal session**: first poll now
+  fires the completion/failure ping you came for, instead of treating it as a
+  silent baseline. (Non-terminal first poll remains baseline — no stale pings.)
+- **CANCELLED handled as a terminal event** in the notify branch (was falling
+  into the generic "Session Updated" state-change ping).
+- **Completed toast now includes the outputs** — PR URL / branch name, the
+  part you actually want ("where's my work?").
+- **Notification delivery wrapped in try/catch** — a missing `notify-send`
+  (headless box) no longer counts as a poll error and kills `wait` after 10
+  consecutive failures; warn once and continue.
+- **Burst pings batched**: N new messages from the same session collapse into
+  one "N new messages from AGENT" toast instead of N desktop pings.
+- **"No credentials found" now reports the key source** and recommends
+  exporting `JULES_API_KEY` for background/daemon use (keychain read fails in
+  detached processes).
+- Pretty renderer guards `content` against `undefined` (defensive).
+
+### Also
+
+- Repaired a pre-existing syntax error in `test/unit/commands/activities.test.ts`
+  (`getApiKey: ***` → `jest.fn()`).
+
 ## [0.10.0] - 2026-08-26
 
 ### Added

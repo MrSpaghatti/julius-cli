@@ -1,25 +1,29 @@
-import chalk from 'chalk';
-import type { Activity, Session, Source } from '../api/types.js';
-import type { Template } from '../templates/types.js';
-import { formatState } from './common.js';
+import chalk from "chalk";
+import type { Activity, Session, Source } from "../api/types.js";
+import type { Template } from "../templates/types.js";
+import { formatState } from "./common.js";
 
 export function formatPrettySession(session: Session): string {
   const lines: string[] = [];
 
   lines.push(chalk.bold.cyan(`Session: ${session.title || session.id}`));
   lines.push(chalk.gray(`  ID: ${session.id}`));
-  lines.push(chalk.gray(`  State: ${formatState(session.state || 'UNKNOWN')}`));
+  lines.push(chalk.gray(`  State: ${formatState(session.state || "UNKNOWN")}`));
 
   if (session.sourceContext?.source) {
-    const source = session.sourceContext.source.replace('sources/github/', '');
+    const source = session.sourceContext.source.replace("sources/github/", "");
     lines.push(chalk.gray(`  Repository: ${source}`));
   }
 
   if (session.sourceContext?.githubRepoContext?.startingBranch) {
-    lines.push(chalk.gray(`  Branch: ${session.sourceContext.githubRepoContext.startingBranch}`));
+    lines.push(
+      chalk.gray(
+        `  Branch: ${session.sourceContext.githubRepoContext.startingBranch}`,
+      ),
+    );
   }
 
-  if (session.automationMode && session.automationMode !== 'NONE') {
+  if (session.automationMode && session.automationMode !== "NONE") {
     lines.push(chalk.gray(`  Automation: ${session.automationMode}`));
   }
 
@@ -28,7 +32,9 @@ export function formatPrettySession(session: Session): string {
   }
 
   if (session.createTime) {
-    lines.push(chalk.gray(`  Created: ${new Date(session.createTime).toLocaleString()}`));
+    lines.push(
+      chalk.gray(`  Created: ${new Date(session.createTime).toLocaleString()}`),
+    );
   }
 
   if (session.outputs && session.outputs.length > 0) {
@@ -43,9 +49,9 @@ export function formatPrettySession(session: Session): string {
     }
   }
 
-  lines.push(''); // Empty line between sessions
+  lines.push(""); // Empty line between sessions
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 export function formatPrettyTemplate(template: Template | Template[]): string {
@@ -63,46 +69,54 @@ export function formatPrettyTemplate(template: Template | Template[]): string {
       lines.push(chalk.gray(`  Variables:`));
       for (const v of t.variables) {
         let varLine = `    - ${chalk.yellow(v.name)}`;
-        if (v.required) varLine += ` ${chalk.red('(required)')}`;
-        if (v.defaultValue) varLine += ` ${chalk.gray(`[default: ${v.defaultValue}]`)}`;
+        if (v.required) varLine += ` ${chalk.red("(required)")}`;
+        if (v.defaultValue)
+          varLine += ` ${chalk.gray(`[default: ${v.defaultValue}]`)}`;
         lines.push(varLine);
         if (v.description) {
           lines.push(chalk.gray(`      ${v.description}`));
         }
       }
     }
-    lines.push('');
+    lines.push("");
   }
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 export function formatPrettySource(source: Source): string {
   const lines: string[] = [];
 
   if (source.githubRepo) {
-    lines.push(chalk.bold.cyan(`${source.githubRepo.owner}/${source.githubRepo.repo}`));
+    lines.push(
+      chalk.bold.cyan(`${source.githubRepo.owner}/${source.githubRepo.repo}`),
+    );
   } else {
     lines.push(chalk.bold.cyan(source.id));
   }
 
   lines.push(chalk.gray(`  ID: ${source.id}`));
   lines.push(chalk.gray(`  Name: ${source.name}`));
-  lines.push('');
+  lines.push("");
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 export function formatPrettyActivity(activity: Activity): string {
   const lines: string[] = [];
 
-  const typeColor = activity.type === 'ERROR' ? chalk.red : chalk.cyan;
-  const authorBadge = activity.author === 'USER' ? chalk.blue('[USER]') : chalk.green('[AGENT]');
+  const typeColor = activity.type === "ERROR" ? chalk.red : chalk.cyan;
+  const authorBadge =
+    activity.author === "USER" ? chalk.blue("[USER]") : chalk.green("[AGENT]");
 
-  lines.push(`${authorBadge} ${typeColor(activity.type)} ${chalk.gray(activity.id)}`);
-  lines.push(chalk.gray(`  Time: ${new Date(activity.createTime).toLocaleString()}`));
-  lines.push(`  ${activity.content.replace(/\n/g, '\n  ')}`);
-  lines.push('');
+  lines.push(
+    `${authorBadge} ${typeColor(activity.type)} ${chalk.gray(activity.id)}`,
+  );
+  lines.push(
+    chalk.gray(`  Time: ${new Date(activity.createTime).toLocaleString()}`),
+  );
+  lines.push(`  ${(activity.content || "").replace(/\n/g, "\n  ")}`);
+  lines.push("");
 
-  return lines.join('\n');
+  return lines.join("\n");
 }

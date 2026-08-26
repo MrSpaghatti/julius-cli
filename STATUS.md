@@ -1,6 +1,6 @@
 # Julius CLI Status
 
-**Version:** 0.10.0
+**Version:** 0.10.1
 **Status:** In Active Development
 **Last Updated:** 2026-08-14
 **Lint cleanup:** 52 `no-explicit-any` → 0, 4 unused-import errors → 0

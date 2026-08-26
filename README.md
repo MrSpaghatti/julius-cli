@@ -246,10 +246,13 @@ julius-cli wait <session-id> --follow --notify
 
 `--notify` fires a desktop notification (via notify-send) on state changes, new
 agent messages (with `--follow`), completion, failure, and approval needed. The
-first poll is treated as a baseline, so you only get pinged for changes that
-happen after you start waiting. It also threads through `sessions create
---wait --notify`, `sessions batch-create --wait --notify`, and
-`templates use <id> --wait --notify`.
+first poll is treated as a baseline — unless the session is already terminal,
+in which case the completion/failure ping fires immediately — so you get pinged
+exactly for what matters. It also threads through `sessions create --wait
+--notify`, `sessions batch-create --wait --notify`, and `templates use <id>
+--wait --notify`. Bursts of agent messages collapse into a single
+"N new messages from AGENT" toast. On a box without `notify-send` the CLI warns
+once and keeps polling instead of erroring out.
 
 ### Batch Operations
 

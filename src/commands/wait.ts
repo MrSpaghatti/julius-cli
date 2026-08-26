@@ -96,9 +96,20 @@ export async function waitCommand(
       lastSession = session;
       consecutiveErrors = 0; // Reset error count on success
 
-      // Notify on state transitions (skip the first poll as baseline)
-      if (notify && lastObservedState !== undefined) {
-        if (session.state !== lastObservedState) {
+      // Notify on state transitions (skip the first poll as baseline — unless the
+      // session is already terminal, in which case fire the ping you came for)
+      if (notify) {
+        const isFirstPoll = lastObservedState === undefined;
+        const terminalAttach =
+          isFirstPoll &&
+          session.state &&
+          TERMINAL_STATES.includes(session.state);
+
+        if (
+          (terminalAttach ||
+            (!isFirstPoll && session.state !== lastObservedState)) &&
+          session.state
+        ) {
           const events: DaemonEvent[] = [];
 
           if (session.state === "COMPLETED") {
@@ -107,6 +118,19 @@ export async function waitCommand(
             events.push(buildFailedEvent(session));
           } else if (session.state === "AWAITING_APPROVAL") {
             events.push(buildNeedsApprovalEvent(session));
+          } else if (session.state === "CANCELLED") {
+            // CANCELLED is a terminal state missing its own event builder —
+            // surface it as a state change so the user sees the cancellation
+            events.push(
+              buildStateChangeEvent(session, lastObservedState) ??
+                ({
+                  type: "state_change",
+                  sessionId: session.id,
+                  title: session.title || "",
+                  from: lastObservedState,
+                  to: "CANCELLED",
+                } satisfies DaemonEvent),
+            );
           } else {
             const stateChange = buildStateChangeEvent(
               session,

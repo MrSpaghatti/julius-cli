@@ -1,21 +1,20 @@
-import { jest } from '@jest/globals';
-import { Command } from 'commander';
+import { jest } from "@jest/globals";
+import { Command } from "commander";
 
 // Mock config
-jest.unstable_mockModule('../../../src/config/index.js', () => ({
+jest.unstable_mockModule("../../../src/config/index.js", () => ({
   config: {
     getApiKey: jest.fn(),
     getApiEndpoint: jest.fn(),
     get: jest.fn(),
-    
+
     getAuthMethod: jest.fn(),
     setAuthMethod: jest.fn(),
-    
   },
 }));
 
 // Mock output
-jest.unstable_mockModule('../../../src/output/formatter.js', () => ({
+jest.unstable_mockModule("../../../src/output/formatter.js", () => ({
   output: jest.fn(),
   outputFormatted: jest.fn(),
 }));
@@ -25,94 +24,121 @@ const mockActivitiesAPIInstance = {
   list: jest.fn(),
   get: jest.fn(),
 };
-jest.unstable_mockModule('../../../src/api/activities.js', () => {
+jest.unstable_mockModule("../../../src/api/activities.js", () => {
   return {
-    ActivitiesAPI: jest.fn().mockImplementation(() => mockActivitiesAPIInstance),
+    ActivitiesAPI: jest
+      .fn()
+      .mockImplementation(() => mockActivitiesAPIInstance),
   };
 });
 
 // Mock pagination
-jest.unstable_mockModule('../../../src/utils/pagination.js', () => ({
+jest.unstable_mockModule("../../../src/utils/pagination.js", () => ({
   fetchAllPages: jest.fn(),
 }));
 
-const { createActivitiesCommands } = await import('../../../src/commands/activities.js');
-const { config } = await import('../../../src/config/index.js');
-const { output, outputFormatted } = await import('../../../src/output/formatter.js');
-const { fetchAllPages } = await import('../../../src/utils/pagination.js');
+const { createActivitiesCommands } =
+  await import("../../../src/commands/activities.js");
+const { config } = await import("../../../src/config/index.js");
+const { output, outputFormatted } =
+  await import("../../../src/output/formatter.js");
+const { fetchAllPages } = await import("../../../src/utils/pagination.js");
 
-describe('Activities Commands', () => {
+describe("Activities Commands", () => {
   let activitiesCmd: Command;
 
   beforeEach(() => {
     jest.clearAllMocks();
     activitiesCmd = createActivitiesCommands();
-    (config.getApiKey as any).mockResolvedValue('test-key');
-    (config.getApiEndpoint as any).mockReturnValue('https://api.test');
-    
-    (config.getAuthMethod as any).mockReturnValue('apikey');
+    (config.getApiKey as any).mockResolvedValue("test-key");
+    (config.getApiEndpoint as any).mockReturnValue("https://api.test");
+
+    (config.getAuthMethod as any).mockReturnValue("apikey");
   });
 
-  describe('list command', () => {
-    it('should list activities', async () => {
-      const mockResult = { items: [{ id: 'a1' }], totalSize: 1 };
+  describe("list command", () => {
+    it("should list activities", async () => {
+      const mockResult = { items: [{ id: "a1" }], totalSize: 1 };
       (mockActivitiesAPIInstance.list as any).mockResolvedValue(mockResult);
 
       const root = new Command().addCommand(activitiesCmd);
-      await root.parseAsync(['node', 'test', 'activities', 'list', '123']);
+      await root.parseAsync(["node", "test", "activities", "list", "123"]);
 
-      expect(mockActivitiesAPIInstance.list).toHaveBeenCalledWith('123', 30, undefined, undefined);
+      expect(mockActivitiesAPIInstance.list).toHaveBeenCalledWith(
+        "123",
+        30,
+        undefined,
+        undefined,
+      );
       expect(outputFormatted).toHaveBeenCalled();
     });
 
-    it('should filter by type', async () => {
+    it("should filter by type", async () => {
       const mockResult = {
-        items: [
-          { id: '1', type: 'PLAN' },
-        ]
+        items: [{ id: "1", type: "PLAN" }],
       };
       (fetchAllPages as any).mockResolvedValue(mockResult);
 
       const root = new Command().addCommand(activitiesCmd);
-      await root.parseAsync(['node', 'test', 'activities', 'list', '123', '--type', 'PLAN']);
+      await root.parseAsync([
+        "node",
+        "test",
+        "activities",
+        "list",
+        "123",
+        "--type",
+        "PLAN",
+      ]);
 
       expect(fetchAllPages).toHaveBeenCalled();
       expect(outputFormatted).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'activities', activities: mockResult.items }),
-        'json'
+        expect.objectContaining({
+          kind: "activities",
+          activities: mockResult.items,
+        }),
+        "json",
       );
     });
 
-    it('should filter by author', async () => {
+    it("should filter by author", async () => {
       const mockResult = {
-        items: [
-          { id: '2', author: 'AGENT' },
-        ]
+        items: [{ id: "2", author: "AGENT" }],
       };
       (fetchAllPages as any).mockResolvedValue(mockResult);
 
       const root = new Command().addCommand(activitiesCmd);
-      await root.parseAsync(['node', 'test', 'activities', 'list', '123', '--author', 'AGENT']);
+      await root.parseAsync([
+        "node",
+        "test",
+        "activities",
+        "list",
+        "123",
+        "--author",
+        "AGENT",
+      ]);
 
       expect(outputFormatted).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'activities', activities: mockResult.items }),
-        'json'
+        expect.objectContaining({
+          kind: "activities",
+          activities: mockResult.items,
+        }),
+        "json",
       );
     });
   });
 
-  describe('get command', () => {
-    it('should get activity details', async () => {
-      const mockActivity = { id: 'a1', content: 'hello' };
+  describe("get command", () => {
+    it("should get activity details", async () => {
+      const mockActivity = { id: "a1", content: "hello" };
       (mockActivitiesAPIInstance.get as any).mockResolvedValue(mockActivity);
 
       const root = new Command().addCommand(activitiesCmd);
-      await root.parseAsync(['node', 'test', 'activities', 'get', '123', 'a1']);
+      await root.parseAsync(["node", "test", "activities", "get", "123", "a1"]);
 
-      expect(mockActivitiesAPIInstance.get).toHaveBeenCalledWith('123', 'a1');
+      expect(mockActivitiesAPIInstance.get).toHaveBeenCalledWith("123", "a1");
       expect(outputFormatted).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'activity', activity: mockActivity }),
-        'json'
+        expect.objectContaining({ kind: "activity", activity: mockActivity }),
+        "json",
       );
     });
   });

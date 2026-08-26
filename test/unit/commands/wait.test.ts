@@ -398,8 +398,9 @@ describe("waitCommand", () => {
     );
   });
 
-  it("should not notify baseline state on first poll", async () => {
-    // session is already COMPLETED on the very first poll
+  it("should notify completed when attaching to an already-terminal session (first poll)", async () => {
+    // Session is already COMPLETED on the very first poll — that's the ping
+    // the user came for, so it MUST fire (audit #2).
     (mockSessionsAPI.get as any).mockResolvedValueOnce({
       id: "123",
       state: "COMPLETED",
@@ -418,6 +419,73 @@ describe("waitCommand", () => {
 
     await waitPromise;
 
+    expect(sendNotification).toHaveBeenCalledWith(
+      [expect.objectContaining({ type: "completed", sessionId: "123" })],
+      ["system"],
+    );
+  });
+
+  it("should not notify a non-terminal baseline state on first poll", async () => {
+    // First poll PENDING (non-terminal) is baseline — no ping for the
+    // pre-existing state. Wait times out (session never reaches COMPLETED),
+    // then assert no notification ever fired.
+    (mockSessionsAPI.get as any).mockResolvedValue({
+      id: "123",
+      state: "PENDING",
+      title: "Test",
+    });
+
+    const waitPromise = waitCommand(client, {
+      sessionId: "123",
+      timeout: 2,
+      interval: 1,
+      state: "COMPLETED" as any,
+      notify: true,
+    });
+
+    await Promise.all([
+      jest.advanceTimersByTimeAsync(2000),
+      expect(waitPromise).rejects.toThrow(/Timeout/),
+    ]);
+
     expect(sendNotification).not.toHaveBeenCalled();
+  });
+
+  it("should notify CANCELLED as a terminal state change", async () => {
+    (mockSessionsAPI.get as any)
+      .mockResolvedValueOnce({
+        id: "123",
+        state: "EXECUTING",
+        title: "Test",
+      })
+      .mockResolvedValueOnce({
+        id: "123",
+        state: "CANCELLED",
+        title: "Test",
+      });
+
+    const waitPromise = waitCommand(client, {
+      sessionId: "123",
+      interval: 1,
+      notify: true,
+    });
+
+    await jest.advanceTimersByTimeAsync(1000);
+    await Promise.resolve();
+    await jest.advanceTimersByTimeAsync(1000);
+    await Promise.resolve();
+
+    await waitPromise;
+
+    expect(sendNotification).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          type: "state_change",
+          sessionId: "123",
+          to: "CANCELLED",
+        }),
+      ],
+      ["system"],
+    );
   });
 });

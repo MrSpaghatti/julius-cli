@@ -1,9 +1,9 @@
-import notifier from 'node-notifier';
-import { Output } from '../output/manager.js';
-import type { Session, SessionState, Activity } from '../api/types.js';
+import notifier from "node-notifier";
+import { Output } from "../output/manager.js";
+import type { Session, SessionState, Activity } from "../api/types.js";
 
 export interface StateChangeEvent {
-  type: 'state_change';
+  type: "state_change";
   sessionId: string;
   title: string;
   from: SessionState | undefined;
@@ -11,14 +11,14 @@ export interface StateChangeEvent {
 }
 
 export interface NeedsApprovalEvent {
-  type: 'needs_approval';
+  type: "needs_approval";
   sessionId: string;
   title: string;
   prompt: string;
 }
 
 export interface NewMessageEvent {
-  type: 'new_message';
+  type: "new_message";
   sessionId: string;
   title: string;
   author: string;
@@ -26,20 +26,20 @@ export interface NewMessageEvent {
 }
 
 export interface CompletedEvent {
-  type: 'completed';
+  type: "completed";
   sessionId: string;
   title: string;
   outputs?: string;
 }
 
 export interface FailedEvent {
-  type: 'failed';
+  type: "failed";
   sessionId: string;
   title: string;
 }
 
 export interface ErrorEvent {
-  type: 'error';
+  type: "error";
   sessionId: string;
   title: string;
   message: string;
@@ -53,83 +53,137 @@ export type DaemonEvent =
   | FailedEvent
   | ErrorEvent;
 
-type NotificationTarget = 'system' | 'agent';
+type NotificationTarget = "system" | "agent";
 
 function shortId(id: string): string {
-  return id.length > 12 ? id.slice(0, 12) + '...' : id;
+  return id.length > 12 ? id.slice(0, 12) + "..." : id;
 }
 
 function eventTitle(event: DaemonEvent): string {
   switch (event.type) {
-    case 'state_change':
-      return `Session ${event.to === 'COMPLETED' ? 'Complete' : event.to === 'FAILED' ? 'Failed' : 'Updated'}`;
-    case 'needs_approval':
-      return 'Approval Needed';
-    case 'new_message':
+    case "state_change":
+      return `Session ${event.to === "COMPLETED" ? "Complete" : event.to === "FAILED" ? "Failed" : "Updated"}`;
+    case "needs_approval":
+      return "Approval Needed";
+    case "new_message":
       return `New message from ${event.author}`;
-    case 'completed':
-      return 'Session Complete';
-    case 'failed':
-      return 'Session Failed';
-    case 'error':
-      return 'Monitoring Error';
+    case "completed":
+      return "Session Complete";
+    case "failed":
+      return "Session Failed";
+    case "error":
+      return "Monitoring Error";
   }
 }
 
 function eventMessage(event: DaemonEvent): string {
   const label = event.title || shortId(event.sessionId);
   switch (event.type) {
-    case 'state_change':
-      return `${label}: ${event.from || 'NEW'} → ${event.to}`;
-    case 'needs_approval':
+    case "state_change":
+      return `${label}: ${event.from || "NEW"} → ${event.to}`;
+    case "needs_approval":
       return `${label}: ${truncate(event.prompt, 80)}`;
-    case 'new_message':
+    case "new_message":
       return `${label}: ${truncate(event.content, 120)}`;
-    case 'completed':
-      return `${label} completed successfully`;
-    case 'failed':
+    case "completed":
+      return `${label} completed successfully${event.outputs ? ` — ${event.outputs}` : ""}`;
+    case "failed":
       return `${label} failed`;
-    case 'error':
+    case "error":
       return `${label}: ${event.message}`;
   }
 }
 
 function truncate(text: string, max: number): string {
   if (text.length <= max) return text;
-  return text.slice(0, max - 3) + '...';
+  return text.slice(0, max - 3) + "...";
 }
+
+let warnedNotifyUnavailable = false;
 
 function sendSystemNotification(event: DaemonEvent): void {
   const title = eventTitle(event);
   const message = eventMessage(event);
 
-  notifier.notify({
-    title: `Jules: ${title}`,
-    message,
-    sound: event.type === 'needs_approval' || event.type === 'failed',
-    timeout: 10,
-  });
+  try {
+    notifier.notify({
+      title: `Jules: ${title}`,
+      message,
+      sound: event.type === "needs_approval" || event.type === "failed",
+      timeout: 10,
+    });
+  } catch (err) {
+    // Headless box / missing notify-send: don't let a failed toast kill the
+    // wait loop's error counter. Warn once and carry on.
+    if (!warnedNotifyUnavailable) {
+      warnedNotifyUnavailable = true;
+      console.error(
+        "julius-cli: system notification unavailable (notify-send missing?); continuing without toasts",
+      );
+    }
+  }
 }
 
 function sendAgentNotification(event: DaemonEvent): void {
-  Output.log(JSON.stringify({
-    daemon: true,
-    timestamp: new Date().toISOString(),
-    ...event,
-  }));
+  Output.log(
+    JSON.stringify({
+      daemon: true,
+      timestamp: new Date().toISOString(),
+      ...event,
+    }),
+  );
+}
+
+// Collapse a burst of new_message events (same session) into a single
+// "N new messages" toast so 10 agent messages don't mean 10 pings.
+function batchEvents(events: DaemonEvent[]): DaemonEvent[] {
+  if (events.length < 2) return events;
+
+  const batched: DaemonEvent[] = [];
+  const messageBuckets = new Map<
+    string,
+    { event: NewMessageEvent; count: number }
+  >();
+
+  for (const event of events) {
+    if (event.type === "new_message") {
+      const key = `${event.sessionId}|${event.author}`;
+      const existing = messageBuckets.get(key);
+      if (existing) {
+        existing.count++;
+      } else {
+        messageBuckets.set(key, { event, count: 1 });
+      }
+    } else {
+      batched.push(event);
+    }
+  }
+
+  for (const { event, count } of messageBuckets.values()) {
+    batched.push(
+      count === 1
+        ? event
+        : {
+            ...event,
+            content: `${count} new messages from ${event.author}`,
+          },
+    );
+  }
+
+  return batched;
 }
 
 export function sendNotification(
   events: DaemonEvent | DaemonEvent[],
-  targets: NotificationTarget[]
+  targets: NotificationTarget[],
 ): void {
-  const list = Array.isArray(events) ? events : [events];
+  const list = batchEvents(Array.isArray(events) ? events : [events]);
 
   for (const event of list) {
-    if (targets.includes('system')) {
+    if (targets.includes("system")) {
       sendSystemNotification(event);
     }
-    if (targets.includes('agent')) {
+    if (targets.includes("agent")) {
       sendAgentNotification(event);
     }
   }
@@ -137,15 +191,15 @@ export function sendNotification(
 
 export function buildStateChangeEvent(
   session: Session,
-  fromState: SessionState | undefined
+  fromState: SessionState | undefined,
 ): StateChangeEvent | null {
   if (!session.state) return null;
   if (session.state === fromState) return null;
 
   return {
-    type: 'state_change',
+    type: "state_change",
     sessionId: session.id,
-    title: session.title || '',
+    title: session.title || "",
     from: fromState,
     to: session.state,
   };
@@ -153,21 +207,21 @@ export function buildStateChangeEvent(
 
 export function buildNeedsApprovalEvent(session: Session): NeedsApprovalEvent {
   return {
-    type: 'needs_approval',
+    type: "needs_approval",
     sessionId: session.id,
-    title: session.title || '',
+    title: session.title || "",
     prompt: session.prompt,
   };
 }
 
 export function buildNewMessageEvent(
   session: Session,
-  activity: Activity
+  activity: Activity,
 ): NewMessageEvent {
   return {
-    type: 'new_message',
+    type: "new_message",
     sessionId: session.id,
-    title: session.title || '',
+    title: session.title || "",
     author: activity.author,
     content: activity.content,
   };
@@ -175,22 +229,22 @@ export function buildNewMessageEvent(
 
 export function buildCompletedEvent(session: Session): CompletedEvent {
   const outputSummary = session.outputs
-    ?.map(o => o.pullRequest?.url || o.branch?.name || '')
+    ?.map((o) => o.pullRequest?.url || o.branch?.name || "")
     .filter(Boolean)
-    .join(', ');
+    .join(", ");
 
   return {
-    type: 'completed',
+    type: "completed",
     sessionId: session.id,
-    title: session.title || '',
+    title: session.title || "",
     outputs: outputSummary,
   };
 }
 
 export function buildFailedEvent(session: Session): FailedEvent {
   return {
-    type: 'failed',
+    type: "failed",
     sessionId: session.id,
-    title: session.title || '',
+    title: session.title || "",
   };
 }

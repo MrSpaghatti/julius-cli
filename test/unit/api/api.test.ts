@@ -119,7 +119,10 @@ describe('API classes', () => {
 
     it('should list activities', async () => {
       const mockResponse = {
-        activities: [{ id: 'a1' }, { id: 'a2' }],
+        activities: [
+          { id: 'a1', originator: 'agent', agentMessaged: { agentMessage: 'hi' } },
+          { id: 'a2', originator: 'user', userMessaged: { userMessage: 'yo' } },
+        ],
         nextPageToken: 'token',
         totalSize: 2
       };
@@ -132,14 +135,21 @@ describe('API classes', () => {
 
       const result = await activitiesAPI.list('123');
       expect(result).toEqual({
-        items: mockResponse.activities,
+        items: [
+          expect.objectContaining({ id: 'a1', type: 'MESSAGE', author: 'AGENT', content: 'hi' }),
+          expect.objectContaining({ id: 'a2', type: 'MESSAGE', author: 'USER', content: 'yo' }),
+        ],
         nextPageToken: mockResponse.nextPageToken,
         totalSize: mockResponse.totalSize
       });
     });
 
     it('should get an activity', async () => {
-      const mockActivity = { id: 'a1', content: 'content' };
+      const mockActivity = {
+        id: 'a1',
+        originator: 'agent',
+        progressUpdated: { title: 'working', description: 'building the thing' },
+      };
 
       server.use(
         http.get(`${baseURL}/sessions/123/activities/a1`, () => {
@@ -148,7 +158,14 @@ describe('API classes', () => {
       );
 
       const result = await activitiesAPI.get('123', 'a1');
-      expect(result).toEqual(mockActivity);
+      expect(result).toEqual(
+        expect.objectContaining({
+          id: 'a1',
+          type: 'PROGRESS',
+          content: 'building the thing',
+          author: 'AGENT',
+        }),
+      );
     });
   });
 
