@@ -1,10 +1,10 @@
-import { SessionsAPI } from '../api/sessions.js';
-import type { JulesAPIClient } from '../api/client.js';
-import type { Session } from '../api/types.js';
-import { getClient } from '../utils/client.js';
-import { InvalidArgsError } from '../utils/errors.js';
-import { inferRepo, getCurrentBranch } from '../utils/git.js';
-import type { OutputFormat } from '../cli/types.js';
+import { SessionsAPI } from "../api/sessions.js";
+import type { JulesAPIClient } from "../api/client.js";
+import type { Session } from "../api/types.js";
+import { getClient } from "../utils/client.js";
+import { InvalidArgsError } from "../utils/errors.js";
+import { inferRepo, getCurrentBranch } from "../utils/git.js";
+import type { OutputFormat } from "../cli/types.js";
 
 export interface CreateSessionParams {
   repo?: string;
@@ -15,6 +15,7 @@ export interface CreateSessionParams {
   requireApproval?: boolean;
   wait?: boolean;
   follow?: boolean;
+  notify?: boolean;
   format: OutputFormat;
 }
 
@@ -25,27 +26,29 @@ export interface CreateSessionResult {
 }
 
 export async function createSession(
-  options: CreateSessionParams
+  options: CreateSessionParams,
 ): Promise<CreateSessionResult> {
   const client = await getClient();
   const api = new SessionsAPI(client);
 
   if (options.prompt.length > 10000) {
-    throw new InvalidArgsError('Prompt is too long (max 10,000 characters)');
+    throw new InvalidArgsError("Prompt is too long (max 10,000 characters)");
   }
 
-  let provider = 'github';
-  let repo = '';
+  let provider = "github";
+  let repo = "";
 
   if (options.repo) {
-    const parts = options.repo.split('/');
+    const parts = options.repo.split("/");
     if (parts.length === 3) {
       provider = parts[0];
       repo = `${parts[1]}/${parts[2]}`;
     } else if (parts.length === 2) {
       repo = options.repo;
     } else {
-      throw new InvalidArgsError('Repository must be in format: [provider/]owner/repo');
+      throw new InvalidArgsError(
+        "Repository must be in format: [provider/]owner/repo",
+      );
     }
   } else {
     const inferred = inferRepo();
@@ -57,10 +60,10 @@ export async function createSession(
   const source = `sources/${sourceId}`;
 
   const providerBranch = options.branch || getCurrentBranch();
-  const sourceContext: Session['sourceContext'] = { source };
-  if (provider === 'gitlab') {
+  const sourceContext: Session["sourceContext"] = { source };
+  if (provider === "gitlab") {
     sourceContext.gitlabRepoContext = { startingBranch: providerBranch };
-  } else if (provider === 'bitbucket') {
+  } else if (provider === "bitbucket") {
     sourceContext.bitbucketRepoContext = { startingBranch: providerBranch };
   } else {
     sourceContext.githubRepoContext = { startingBranch: providerBranch };
@@ -72,7 +75,7 @@ export async function createSession(
     sourceContext,
   };
   if (options.autoPr) {
-    createParams.automationMode = 'AUTO_CREATE_PR';
+    createParams.automationMode = "AUTO_CREATE_PR";
   }
   if (options.requireApproval) {
     createParams.requirePlanApproval = true;

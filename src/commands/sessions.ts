@@ -1,94 +1,103 @@
-import { Command } from 'commander';
-import ora from 'ora';
-import { config } from '../config/index.js';
-import { SessionsAPI } from '../api/sessions.js';
-import { output, outputFormatted, createFormatterContext } from '../output/formatter.js';
-import { Output } from '../output/manager.js';
-import { InvalidArgsError } from '../utils/errors.js';
+import { Command } from "commander";
+import ora from "ora";
+import { config } from "../config/index.js";
+import { SessionsAPI } from "../api/sessions.js";
+import {
+  output,
+  outputFormatted,
+  createFormatterContext,
+} from "../output/formatter.js";
+import { Output } from "../output/manager.js";
+import { InvalidArgsError } from "../utils/errors.js";
 import {
   inferRepo,
   pullSessionChanges,
   diffSessionChanges,
-} from '../utils/git.js';
-import { fetchAllPages } from '../utils/pagination.js';
-import { getClient } from '../utils/client.js';
-import { createSession } from '../services/sessionService.js';
-import { waitCommand } from './wait.js';
-import { createSessionsBatchCommands } from './sessions-batch.js';
-import type { OutputFormat } from '../cli/types.js';
-import type { CreateSessionParams } from '../services/sessionService.js';
+} from "../utils/git.js";
+import { fetchAllPages } from "../utils/pagination.js";
+import { getClient } from "../utils/client.js";
+import { createSession } from "../services/sessionService.js";
+import { waitCommand } from "./wait.js";
+import { createSessionsBatchCommands } from "./sessions-batch.js";
+import type { OutputFormat } from "../cli/types.js";
+import type { CreateSessionParams } from "../services/sessionService.js";
 
 export async function handleCreateSession(options: CreateSessionParams) {
   let spinner;
-  if (options.format === 'pretty' && !options.wait && !options.follow) {
-    spinner = ora('Creating session...').start();
+  if (options.format === "pretty" && !options.wait && !options.follow) {
+    spinner = ora("Creating session...").start();
   }
 
   const { client, session } = await createSession(options);
 
   if (spinner) {
     spinner.succeed(`Session created: ${session.id}`);
-    Output.info('');
+    Output.info("");
   }
 
-  outputFormatted({ kind: 'session', session }, options.format);
+  outputFormatted({ kind: "session", session }, options.format);
 
   if (options.wait || options.follow) {
-    if (options.format === 'pretty') {
-      Output.info('\n--- Waiting for Session Completion ---\n');
+    if (options.format === "pretty") {
+      Output.info("\n--- Waiting for Session Completion ---\n");
     }
     await waitCommand(client, {
       sessionId: session.id,
       format: options.format,
       follow: true, // both --wait and --follow should follow
-      interval: config.getRequired('pollInterval') / 1000,
-      timeout: (config.getRequired('maxPollAttempts') * config.getRequired('pollInterval')) / 1000,
+      notify: options.notify,
+      interval: config.getRequired("pollInterval") / 1000,
+      timeout:
+        (config.getRequired("maxPollAttempts") *
+          config.getRequired("pollInterval")) /
+        1000,
       activityFormatterContext: createFormatterContext(),
     });
   }
 }
 
 export function createSessionsCommands(): Command {
-  const sessions = new Command('sessions').description('Manage Jules sessions');
+  const sessions = new Command("sessions").description("Manage Jules sessions");
 
   sessions
-    .command('create')
-    .description('Create a new session')
-    .option('-r, --repo <repo>', 'GitHub repository (owner/repo)')
-    .requiredOption('-p, --prompt <prompt>', 'Task prompt for Jules')
-    .option('-t, --title <title>', 'Session title')
-    .option('-b, --branch <branch>', 'Starting branch (default: main)')
-    .option('--auto-pr', 'Automatically create PR when done')
-    .option('--require-approval', 'Require plan approval before execution')
-    .option('-w, --wait', 'Block until session completes (implies --follow)')
-    .option('--follow', 'Stream activity updates while waiting')
+    .command("create")
+    .description("Create a new session")
+    .option("-r, --repo <repo>", "GitHub repository (owner/repo)")
+    .requiredOption("-p, --prompt <prompt>", "Task prompt for Jules")
+    .option("-t, --title <title>", "Session title")
+    .option("-b, --branch <branch>", "Starting branch (default: main)")
+    .option("--auto-pr", "Automatically create PR when done")
+    .option("--require-approval", "Require plan approval before execution")
+    .option("-w, --wait", "Block until session completes (implies --follow)")
+    .option("--follow", "Stream activity updates while waiting")
     .option(
-      '--format <format>',
-      'Output format (json|pretty|quiet|table)',
-      config.get('defaultFormat') || 'json'
+      "--notify",
+      "Send a system notification when the session updates or completes",
+    )
+    .option(
+      "--format <format>",
+      "Output format (json|pretty|quiet|table)",
+      config.get("defaultFormat") || "json",
     )
     .action(handleCreateSession);
 
   sessions
-    .command('list')
-    .description('List sessions')
-    .option('--repo <repo>', 'Filter by repository (owner/repo)')
-    .option('--state <states...>', 'Filter by state(s)')
-    .option('--creator <creator>', 'Filter by creator email')
+    .command("list")
+    .description("List sessions")
+    .option("--repo <repo>", "Filter by repository (owner/repo)")
+    .option("--state <states...>", "Filter by state(s)")
+    .option("--creator <creator>", "Filter by creator email")
     .option(
-      '--page-size <n>',
-      'Results per page (max 100)',
-      config.get('defaultPageSize')?.toString() || '30'
+      "--page-size <n>",
+      "Results per page (max 100)",
+      config.get("defaultPageSize")?.toString() || "30",
     )
-    .option('--page-token <token>', 'Pagination token from previous response')
+    .option("--page-token <token>", "Pagination token from previous response")
+    .option("--all", "Fetch all sessions (automatically follows nextPageToken)")
     .option(
-      '--all',
-      'Fetch all sessions (automatically follows nextPageToken)'
-    )
-    .option(
-      '--format <format>',
-      'Output format (json|pretty|quiet|table)',
-      config.get('defaultFormat') || 'json'
+      "--format <format>",
+      "Output format (json|pretty|quiet|table)",
+      config.get("defaultFormat") || "json",
     )
     .action(
       async (options: {
@@ -105,24 +114,24 @@ export function createSessionsCommands(): Command {
 
         const pageSize = parseInt(options.pageSize, 10);
         if (isNaN(pageSize) || pageSize < 1 || pageSize > 100) {
-          throw new InvalidArgsError('Page size must be between 1 and 100');
+          throw new InvalidArgsError("Page size must be between 1 and 100");
         }
 
         const buildRepoFilter = (repo: string): string | undefined => {
-          if (!repo.includes('/')) {
+          if (!repo.includes("/")) {
             return `source = "sources/${repo}"`;
           }
-        
-          const parts = repo.split('/');
+
+          const parts = repo.split("/");
           if (parts.length === 3) {
             return `source = "sources/${repo}"`;
           }
-        
+
           if (parts.length !== 2) {
             return undefined;
           }
-        
-          let provider = 'github';
+
+          let provider = "github";
           try {
             const inferred = inferRepo();
             if (inferred.repo === repo) {
@@ -131,38 +140,43 @@ export function createSessionsCommands(): Command {
           } catch {
             // keep default provider
           }
-        
+
           return `source = "sources/${provider}/${repo}"`;
         };
-        
+
         const filters: string[] = [];
-        const repoFilter = options.repo ? buildRepoFilter(options.repo) : undefined;
-                if (repoFilter) {
-                  filters.push(repoFilter);
-                }
+        const repoFilter = options.repo
+          ? buildRepoFilter(options.repo)
+          : undefined;
+        if (repoFilter) {
+          filters.push(repoFilter);
+        }
         if (options.state && options.state.length > 0) {
           const stateFilters = options.state
             .map((s) => `state = "${s}"`)
-            .join(' OR ');
+            .join(" OR ");
           filters.push(`(${stateFilters})`);
         }
         if (options.creator) {
           filters.push(`creator = "${options.creator}"`);
         }
-        const filter = filters.length > 0 ? filters.join(' AND ') : undefined;
+        const filter = filters.length > 0 ? filters.join(" AND ") : undefined;
 
         let result;
-        const shouldFetchAll = options.all || options.repo || (options.state && options.state.length > 0);
+        const shouldFetchAll =
+          options.all ||
+          options.repo ||
+          (options.state && options.state.length > 0);
 
         let spinner;
-        if (options.format === 'pretty' && shouldFetchAll) {
-          spinner = ora('Fetching all pages...').start();
+        if (options.format === "pretty" && shouldFetchAll) {
+          spinner = ora("Fetching all pages...").start();
         }
 
         if (shouldFetchAll) {
           result = await fetchAllPages(
             (token, size) => api.list(size, token, filter),
-            100
+            100,
           );
         } else {
           result = await api.list(pageSize, options.pageToken, filter);
@@ -174,39 +188,39 @@ export function createSessionsCommands(): Command {
 
         const items = result.items;
 
-        if (options.format === 'pretty') {
-          Output.info('Sessions:\n');
+        if (options.format === "pretty") {
+          Output.info("Sessions:\n");
           for (const session of items) {
-            outputFormatted({ kind: 'session', session }, 'pretty');
+            outputFormatted({ kind: "session", session }, "pretty");
           }
           Output.info(`Total: ${items.length} sessions`);
           if (!shouldFetchAll && result.nextPageToken) {
             Output.info(
-              `\nNext page: julius-cli sessions list --page-token ${result.nextPageToken}`
+              `\nNext page: julius-cli sessions list --page-token ${result.nextPageToken}`,
             );
           }
         } else {
           outputFormatted(
             {
-              kind: 'sessions',
+              kind: "sessions",
               sessions: items,
               nextPageToken: result.nextPageToken,
               totalSize: result.totalSize,
             },
-            options.format
+            options.format,
           );
         }
-      }
+      },
     );
 
   sessions
-    .command('get')
-    .description('Get session details')
-    .argument('<session-id>', 'Session ID')
+    .command("get")
+    .description("Get session details")
+    .argument("<session-id>", "Session ID")
     .option(
-      '--format <format>',
-      'Output format (json|pretty|quiet|table)',
-      config.get('defaultFormat') || 'json'
+      "--format <format>",
+      "Output format (json|pretty|quiet|table)",
+      config.get("defaultFormat") || "json",
     )
     .action(async (sessionId: string, options: { format: OutputFormat }) => {
       const client = await getClient();
@@ -214,30 +228,30 @@ export function createSessionsCommands(): Command {
 
       const session = await api.get(sessionId);
 
-      outputFormatted({ kind: 'session', session }, options.format);
+      outputFormatted({ kind: "session", session }, options.format);
     });
 
   sessions
-    .command('send')
-    .description('Send a message to an active session')
-    .argument('<session-id>', 'Session ID')
-    .requiredOption('-m, --message <message>', 'Message to send')
+    .command("send")
+    .description("Send a message to an active session")
+    .argument("<session-id>", "Session ID")
+    .requiredOption("-m, --message <message>", "Message to send")
     .option(
-      '--format <format>',
-      'Output format (json|pretty|quiet|table)',
-      config.get('defaultFormat') || 'json'
+      "--format <format>",
+      "Output format (json|pretty|quiet|table)",
+      config.get("defaultFormat") || "json",
     )
     .action(
       async (
         sessionId: string,
-        options: { message: string; format: OutputFormat }
+        options: { message: string; format: OutputFormat },
       ) => {
         const client = await getClient();
         const api = new SessionsAPI(client);
 
         if (options.message.length > 10000) {
           throw new InvalidArgsError(
-            'Message is too long (max 10,000 characters)'
+            "Message is too long (max 10,000 characters)",
           );
         }
 
@@ -245,23 +259,23 @@ export function createSessionsCommands(): Command {
 
         output(
           {
-            status: 'success',
-            message: 'Message sent successfully',
+            status: "success",
+            message: "Message sent successfully",
             sessionId,
           },
-          options.format
+          options.format,
         );
-      }
+      },
     );
 
   sessions
-    .command('approve')
-    .description('Approve the plan for a session')
-    .argument('<session-id>', 'Session ID')
+    .command("approve")
+    .description("Approve the plan for a session")
+    .argument("<session-id>", "Session ID")
     .option(
-      '--format <format>',
-      'Output format (json|pretty|quiet|table)',
-      config.get('defaultFormat') || 'json'
+      "--format <format>",
+      "Output format (json|pretty|quiet|table)",
+      config.get("defaultFormat") || "json",
     )
     .action(async (sessionId: string, options: { format: OutputFormat }) => {
       const client = await getClient();
@@ -271,39 +285,45 @@ export function createSessionsCommands(): Command {
 
       output(
         {
-          status: 'success',
-          message: 'Plan approved successfully',
+          status: "success",
+          message: "Plan approved successfully",
           sessionId,
         },
-        options.format
+        options.format,
       );
     });
 
   sessions
-    .command('cancel')
-    .description('Cancel a running session')
-    .argument('<session-id>', 'Session ID')
+    .command("cancel")
+    .description("Cancel a running session")
+    .argument("<session-id>", "Session ID")
     .action(async (sessionId: string) => {
       const client = await getClient();
       const api = new SessionsAPI(client);
       await api.cancel(sessionId);
-      Output.log(JSON.stringify({ status: 'success', message: 'Session cancelled successfully', sessionId }));
+      Output.log(
+        JSON.stringify({
+          status: "success",
+          message: "Session cancelled successfully",
+          sessionId,
+        }),
+      );
       Output.info(`✓ Session ${sessionId} cancelled successfully`);
     });
 
   sessions
-    .command('pull')
-    .description('Fetch and checkout the branch/PR created by a session')
-    .argument('<session-id>', 'Session ID')
+    .command("pull")
+    .description("Fetch and checkout the branch/PR created by a session")
+    .argument("<session-id>", "Session ID")
     .action(async (sessionId: string) => {
       const client = await getClient();
       const api = new SessionsAPI(client);
 
       const session = await api.get(sessionId);
 
-      if (session.state !== 'COMPLETED') {
+      if (session.state !== "COMPLETED") {
         throw new Error(
-          `Session ${sessionId} is not in COMPLETED state (Current: ${session.state})`
+          `Session ${sessionId} is not in COMPLETED state (Current: ${session.state})`,
         );
       }
 
@@ -317,7 +337,9 @@ export function createSessionsCommands(): Command {
       // Validate and parse source format
       const sourceMatch = session.sourceContext.source.match(/^sources\/(.+)$/);
       if (!sourceMatch || !sourceMatch[1]) {
-        throw new InvalidArgsError(`Invalid source format: ${session.sourceContext.source}`);
+        throw new InvalidArgsError(
+          `Invalid source format: ${session.sourceContext.source}`,
+        );
       }
       const repo = sourceMatch[1];
 
@@ -329,18 +351,18 @@ export function createSessionsCommands(): Command {
   }
 
   sessions
-    .command('diff')
-    .description('Show local diff of the changes proposed in a session')
-    .argument('<session-id>', 'Session ID')
+    .command("diff")
+    .description("Show local diff of the changes proposed in a session")
+    .argument("<session-id>", "Session ID")
     .action(async (sessionId: string) => {
       const client = await getClient();
       const api = new SessionsAPI(client);
 
       const session = await api.get(sessionId);
 
-      if (session.state !== 'COMPLETED') {
+      if (session.state !== "COMPLETED") {
         throw new Error(
-          `Session ${sessionId} is not in COMPLETED state (Current: ${session.state}). Can only diff completed sessions.`
+          `Session ${sessionId} is not in COMPLETED state (Current: ${session.state}). Can only diff completed sessions.`,
         );
       }
 

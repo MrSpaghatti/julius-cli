@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.0] - 2026-08-26
+
+### Added
+- **`--notify` on `wait`** — send a system notification (notify-send) when a session updates while you wait: state changes, new agent messages (with `--follow`), completion, failure, or approval needed. No more babysitting the terminal — start `julius-cli wait <id> --notify`, walk away, get pinged when there's something to act on.
+- **`--notify` on `sessions create --wait`, `sessions batch-create --wait`, and `templates use --wait`** — the flag threads through every command that blocks on session completion.
+- Notifications first poll is treated as baseline; only actual transitions fire a toast, so you won't get a notification for a session that was already COMPLETED when you started waiting.
+
+### Fixed
+- Removed a dead duplicate `AWAITING_APPROVAL` notification block in the daemon service.
+- Repaired a syntax error in `test/unit/commands/wait-cli.test.ts` (`getApiKey: ***` → `jest.fn()`).
+
 ## [0.9.1] - 2026-08-16
 
 ### Removed

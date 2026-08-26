@@ -238,7 +238,18 @@ julius-cli wait <session-id-1> <session-id-2> <session-id-3>
 
 # Wait for a specific state with activity type filtering
 julius-cli wait <session-id> --state AWAITING_APPROVAL --activity-type PLAN MESSAGE
+
+# Walk away — get a system notification on updates (v0.10.0+)
+julius-cli wait <session-id> --notify
+julius-cli wait <session-id> --follow --notify
 ```
+
+`--notify` fires a desktop notification (via notify-send) on state changes, new
+agent messages (with `--follow`), completion, failure, and approval needed. The
+first poll is treated as a baseline, so you only get pinged for changes that
+happen after you start waiting. It also threads through `sessions create
+--wait --notify`, `sessions batch-create --wait --notify`, and
+`templates use <id> --wait --notify`.
 
 ### Batch Operations
 

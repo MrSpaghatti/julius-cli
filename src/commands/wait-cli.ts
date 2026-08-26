@@ -10,154 +10,160 @@ import { createFormatterContext } from "../output/formatter.js";
 import { Output } from "../output/manager.js";
 
 export function createWaitCommand(): Command {
-	const wait = new Command("wait");
+  const wait = new Command("wait");
 
-	const defaultPollInterval = config.getRequired("pollInterval");
-	const defaultMaxPollAttempts = config.getRequired("maxPollAttempts");
-	const defaultTimeout = (
-		defaultMaxPollAttempts *
-		(defaultPollInterval / 1000)
-	).toString();
+  const defaultPollInterval = config.getRequired("pollInterval");
+  const defaultMaxPollAttempts = config.getRequired("maxPollAttempts");
+  const defaultTimeout = (
+    defaultMaxPollAttempts *
+    (defaultPollInterval / 1000)
+  ).toString();
 
-	wait
-		.description(
-			"Wait for one or more sessions to reach a specific state (blocks until completion)",
-		)
-		.argument("<session-ids...>", "Session IDs to wait for")
-		.option(
-			"-t, --timeout <seconds>",
-			"Timeout in seconds (default: 600)",
-			defaultTimeout,
-		)
-		.option(
-			"-i, --interval <seconds>",
-			"Poll interval in seconds (default: 5)",
-			(defaultPollInterval / 1000).toString(),
-		)
-		.option(
-			"-s, --state <state>",
-			"Wait for specific state (default: COMPLETED, FAILED, or CANCELLED)",
-		)
-		.option(
-			"-f, --format <format>",
-			"Output format: json, pretty, quiet, table",
-			config.get("defaultFormat") || "json",
-		)
-		.option("--follow", "Stream activity updates while waiting")
-		.option(
-			"--activity-type <types...>",
-			"Filter streamed activities by type (PLAN, MESSAGE, PROGRESS, ERROR)",
-		)
-		.option("--verbose", "Enable verbose logging")
-		.action(
-			async (
-				sessionIds: string[],
-				options: {
-					timeout?: string;
-					interval?: string;
-					format: string;
-					state?: string;
-					follow?: boolean;
-					activityType?: string[];
-					verbose?: boolean;
-				},
-			) => {
-				const client = await getClient();
+  wait
+    .description(
+      "Wait for one or more sessions to reach a specific state (blocks until completion)",
+    )
+    .argument("<session-ids...>", "Session IDs to wait for")
+    .option(
+      "-t, --timeout <seconds>",
+      "Timeout in seconds (default: 600)",
+      defaultTimeout,
+    )
+    .option(
+      "-i, --interval <seconds>",
+      "Poll interval in seconds (default: 5)",
+      (defaultPollInterval / 1000).toString(),
+    )
+    .option(
+      "-s, --state <state>",
+      "Wait for specific state (default: COMPLETED, FAILED, or CANCELLED)",
+    )
+    .option(
+      "-f, --format <format>",
+      "Output format: json, pretty, quiet, table",
+      config.get("defaultFormat") || "json",
+    )
+    .option("--follow", "Stream activity updates while waiting")
+    .option(
+      "--activity-type <types...>",
+      "Filter streamed activities by type (PLAN, MESSAGE, PROGRESS, ERROR)",
+    )
+    .option(
+      "--notify",
+      "Send a system notification on session updates (state changes, new messages, completion)",
+    )
+    .option("--verbose", "Enable verbose logging")
+    .action(
+      async (
+        sessionIds: string[],
+        options: {
+          timeout?: string;
+          interval?: string;
+          format: string;
+          state?: string;
+          follow?: boolean;
+          activityType?: string[];
+          notify?: boolean;
+          verbose?: boolean;
+        },
+      ) => {
+        const client = await getClient();
 
-				// Parse timeout and interval
-				const timeout = parseInt(options.timeout || defaultTimeout, 10);
-				const interval = parseInt(options.interval || "5", 10);
+        // Parse timeout and interval
+        const timeout = parseInt(options.timeout || defaultTimeout, 10);
+        const interval = parseInt(options.interval || "5", 10);
 
-				if (isNaN(timeout) || timeout <= 0) {
-					throw new CLIError(
-						"Timeout must be a positive number",
-						ExitCode.INVALID_ARGS,
-					);
-				}
+        if (isNaN(timeout) || timeout <= 0) {
+          throw new CLIError(
+            "Timeout must be a positive number",
+            ExitCode.INVALID_ARGS,
+          );
+        }
 
-				if (isNaN(interval) || interval <= 0) {
-					throw new CLIError(
-						"Interval must be a positive number",
-						ExitCode.INVALID_ARGS,
-					);
-				}
+        if (isNaN(interval) || interval <= 0) {
+          throw new CLIError(
+            "Interval must be a positive number",
+            ExitCode.INVALID_ARGS,
+          );
+        }
 
-				// Validate state if provided
-				const validStates: SessionState[] = [
-					"PENDING",
-					"PLANNING",
-					"AWAITING_APPROVAL",
-					"EXECUTING",
-					"COMPLETED",
-					"FAILED",
-					"CANCELLED",
-				];
+        // Validate state if provided
+        const validStates: SessionState[] = [
+          "PENDING",
+          "PLANNING",
+          "AWAITING_APPROVAL",
+          "EXECUTING",
+          "COMPLETED",
+          "FAILED",
+          "CANCELLED",
+        ];
 
-				if (
-					options.state &&
-					!validStates.includes(options.state as SessionState)
-				) {
-					throw new CLIError(
-						`Invalid state: ${options.state}. Valid states: ${validStates.join(", ")}`,
-						ExitCode.INVALID_ARGS,
-					);
-				}
+        if (
+          options.state &&
+          !validStates.includes(options.state as SessionState)
+        ) {
+          throw new CLIError(
+            `Invalid state: ${options.state}. Valid states: ${validStates.join(", ")}`,
+            ExitCode.INVALID_ARGS,
+          );
+        }
 
-				// If multiple sessions, we run them in parallel
-				const colors = [
-					chalk.blue,
-					chalk.magenta,
-					chalk.cyan,
-					chalk.yellow,
-					chalk.green,
-				];
-				const waitPromises = sessionIds.map((sessionId, index) => {
-					const color = colors[index % colors.length];
-					const prefix =
-						sessionIds.length > 1 ? color(`[${sessionId}] `) : undefined;
+        // If multiple sessions, we run them in parallel
+        const colors = [
+          chalk.blue,
+          chalk.magenta,
+          chalk.cyan,
+          chalk.yellow,
+          chalk.green,
+        ];
+        const waitPromises = sessionIds.map((sessionId, index) => {
+          const color = colors[index % colors.length];
+          const prefix =
+            sessionIds.length > 1 ? color(`[${sessionId}] `) : undefined;
 
-					return waitCommand(client, {
-						sessionId,
-						timeout,
-						interval,
-						state: options.state as SessionState | undefined,
-						format: options.format as OutputFormat,
-						verbose: !!options.verbose,
-						follow: !!options.follow,
-						activityTypes: options.activityType,
-						noSpinner: sessionIds.length > 1,
-						prefix,
-						activityFormatterContext: createFormatterContext(),
-					});
-				});
+          return waitCommand(client, {
+            sessionId,
+            timeout,
+            interval,
+            state: options.state as SessionState | undefined,
+            format: options.format as OutputFormat,
+            verbose: !!options.verbose,
+            follow: !!options.follow,
+            activityTypes: options.activityType,
+            notify: !!options.notify,
+            noSpinner: sessionIds.length > 1,
+            prefix,
+            activityFormatterContext: createFormatterContext(),
+          });
+        });
 
-				const results = await Promise.allSettled(waitPromises);
+        const results = await Promise.allSettled(waitPromises);
 
-				const failed = results.filter((r) => r.status === "rejected");
-				if (failed.length > 0) {
-					if (options.format === "pretty") {
-						Output.error(
-							chalk.red(`\n${failed.length} session(s) failed or timed out:`),
-						);
-						failed.forEach((r) => {
-							const error = (r as PromiseRejectedResult).reason;
-							Output.error(chalk.red(`  - ${error.message || error}`));
-						});
-					}
+        const failed = results.filter((r) => r.status === "rejected");
+        if (failed.length > 0) {
+          if (options.format === "pretty") {
+            Output.error(
+              chalk.red(`\n${failed.length} session(s) failed or timed out:`),
+            );
+            failed.forEach((r) => {
+              const error = (r as PromiseRejectedResult).reason;
+              Output.error(chalk.red(`  - ${error.message || error}`));
+            });
+          }
 
-					// Exit with non-zero if any failed
-					process.exit(ExitCode.GENERAL_ERROR);
-				}
+          // Exit with non-zero if any failed
+          process.exit(ExitCode.GENERAL_ERROR);
+        }
 
-				if (options.format === "pretty" && sessionIds.length > 1) {
-					Output.info(
-						chalk.green(
-							`\nAll ${sessionIds.length} sessions reached target state.`,
-						),
-					);
-				}
-			},
-		);
+        if (options.format === "pretty" && sessionIds.length > 1) {
+          Output.info(
+            chalk.green(
+              `\nAll ${sessionIds.length} sessions reached target state.`,
+            ),
+          );
+        }
+      },
+    );
 
-	return wait;
+  return wait;
 }

@@ -72,7 +72,11 @@ None — v0.8.0 is complete ✅
 1. **TUI creator filter** — press `u` to filter sessions by creator email (server-side) ✅
 2. **TUI batch operations** — `space` multi-select, `p`/`x` act on the whole selection ✅
 
-### Next (v0.9.x / v0.10.0 Ideas)
+## v0.10.0 ✓ Completed
+
+1. **`--notify` notifications on wait flows** — `julius-cli wait <id> --notify` (plus `sessions create --wait`, `batch-create --wait`, `templates use --wait`) fires a system notification on state change, completion, failure, approval-needed, and (with `--follow`) new agent messages. No more babysitting polls. ✅
+
+### Next (v0.11.0 Ideas)
 
 - Session performance analytics (cost, duration, success rate) — note: the API `Session` type currently exposes no cost field, so cost needs to be derived externally or waited on
 - Cost and quota monitoring tools

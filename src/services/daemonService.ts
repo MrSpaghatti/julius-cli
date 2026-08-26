@@ -158,14 +158,6 @@ export class DaemonService {
 			tracked.state = session.state;
 		}
 
-		if (
-			session.state === "AWAITING_APPROVAL" &&
-			!tracked.notifiedNeedsApproval
-		) {
-			events.push(buildNeedsApprovalEvent(session));
-			tracked.notifiedNeedsApproval = true;
-		}
-
 		try {
 			const activitiesResult = await this.activitiesAPI.list(session.id, 10);
 			const activities = activitiesResult.items || [];
