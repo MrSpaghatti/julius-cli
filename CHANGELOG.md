@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.2] - 2026-08-26
+
+### Fixed — audit #9: `wait` appeared to hang with zero output
+
+- **Root-level `--verbose` shadowed the subcommand option.** `cli.ts` defined
+  `--verbose` globally, so commander route the flag to root opts and every
+  subcommand's `options.verbose` was `undefined` — `wait --verbose` silently
+  never logged, and `wait` in default json/quiet mode prints nothing until a
+  terminal state, so it *looked* hung while actually polling fine. Removed the
+  unused global option; subcommand `--verbose` now reaches `waitCommand`.
+- **Timeout deadline now exact**: the post-poll `sleep(intervalMs)` could push
+  the effective timeout PAST the requested value by up to one full interval
+  (a `--timeout 10 --interval 2` run could take 12s+). Sleep is now capped at
+  the remaining time to deadline in both the success and error paths, so
+  `wait --timeout N` exits at ≤ N+ε.
+
 ## [0.10.1] - 2026-08-26
 
 ### Fixed — activity wire-format mismatch (critical, audit #1/#8)

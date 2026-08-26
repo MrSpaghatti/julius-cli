@@ -272,8 +272,12 @@ export async function waitCommand(
         return;
       }
 
-      // Wait before next poll
-      await sleep(intervalMs);
+      // Wait before next poll — cap at the timeout deadline so a jittery
+      // poll + interval doesn't overshoot the user's timeout by a whole
+      // interval (the "wait hangs" symptom).
+      const elapsedNow = Date.now() - startTime;
+      const remaining = Math.max(0, timeoutMs - elapsedNow);
+      await sleep(Math.min(intervalMs, remaining));
     } catch (error: unknown) {
       consecutiveErrors++;
 
@@ -310,8 +314,10 @@ export async function waitCommand(
         );
       }
 
-      // For other errors, wait and continue
-      await sleep(intervalMs);
+      // For other errors, wait and continue (capped at the timeout deadline)
+      const elapsedNowErr = Date.now() - startTime;
+      const remainingErr = Math.max(0, timeoutMs - elapsedNowErr);
+      await sleep(Math.min(intervalMs, remainingErr));
     }
   }
 }

@@ -88,6 +88,16 @@ None — v0.8.0 is complete ✅
    completed toast includes outputs, notify try/catch (headless-safe),
    burst-batched toasts, key-source in auth error. ✅
 
+## v0.10.2 ✓ Completed
+
+1. **Audit #9 (wait "hang")** — root-level `--verbose` shadowed the subcommand
+   flag (commander routes it to root opts), so `wait --verbose` never logged
+   and json/quiet waits looked hung while polling fine. Removed the unused
+   global option. ✅
+2. **Exact timeout deadline** — post-poll sleep capped at remaining time to
+   deadline, so `wait --timeout N` exits at ≤ N+ε instead of overshooting by a
+   full interval. ✅
+
 ### Next (v0.11.0 Ideas)
 
 - Session performance analytics (cost, duration, success rate) — note: the API `Session` type currently exposes no cost field, so cost needs to be derived externally or waited on

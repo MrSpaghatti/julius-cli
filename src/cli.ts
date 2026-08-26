@@ -1,26 +1,29 @@
-import { Command } from 'commander';
-import { createRequire } from 'node:module';
+import { Command } from "commander";
+import { createRequire } from "node:module";
 
 // Read the version from package.json at runtime so it can never drift from
 // the published package. Works in the bundled ESM (tsup shims require) and
 // under jest's ESM loader, which rejects named imports from JSON modules.
 const require = createRequire(import.meta.url);
-const { version } = require('../package.json') as { version: string };
+const { version } = require("../package.json") as { version: string };
 
-import { createAuthCommands } from './commands/auth.js';
-import { createSourcesCommands } from './commands/sources.js';
-import { createSessionsCommands } from './commands/sessions.js';
-import { createActivitiesCommands } from './commands/activities.js';
-import { createWaitCommand } from './commands/wait-cli.js';
-import { createConfigCommands } from './commands/config.js';
-import { createTemplatesCommands } from './commands/templates.js';
-import { createInteractiveCommand } from './commands/interactive.js';
-import { createListenCommand } from './commands/listen.js';
-import { createCompletionCommand } from './commands/completion.js';
-import { createTuiCommand } from './commands/tui.js';
-import { createDaemonCommand } from './commands/daemon.js';
-import { createCommandRegistry, createInteractiveCommandExecutor } from './cli/parser.js';
-import { handleError } from './utils/errors.js';
+import { createAuthCommands } from "./commands/auth.js";
+import { createSourcesCommands } from "./commands/sources.js";
+import { createSessionsCommands } from "./commands/sessions.js";
+import { createActivitiesCommands } from "./commands/activities.js";
+import { createWaitCommand } from "./commands/wait-cli.js";
+import { createConfigCommands } from "./commands/config.js";
+import { createTemplatesCommands } from "./commands/templates.js";
+import { createInteractiveCommand } from "./commands/interactive.js";
+import { createListenCommand } from "./commands/listen.js";
+import { createCompletionCommand } from "./commands/completion.js";
+import { createTuiCommand } from "./commands/tui.js";
+import { createDaemonCommand } from "./commands/daemon.js";
+import {
+  createCommandRegistry,
+  createInteractiveCommandExecutor,
+} from "./cli/parser.js";
+import { handleError } from "./utils/errors.js";
 
 export const cli = new Command();
 
@@ -43,28 +46,31 @@ const commandsAfterInteractive = [
 
 const interactiveCommandNames = createCommandRegistry([
   ...commandsBeforeInteractive.map((command) => command.name()),
-  'interactive',
+  "interactive",
   ...commandsAfterInteractive.map((command) => command.name()),
 ]);
 
 cli
-  .name('julius-cli')
-  .description('AI-first CLI for Jules REST API with JSON output and full automation support')
+  .name("julius-cli")
+  .description(
+    "AI-first CLI for Jules REST API with JSON output and full automation support",
+  )
   .version(version);
 
 // Global options
-cli.option('--verbose', 'Enable verbose logging');
-cli.option('--no-color', 'Disable colored output');
+cli.option("--no-color", "Disable colored output");
 
 // Add command groups
 for (const command of commandsBeforeInteractive) {
   cli.addCommand(command);
 }
 
-cli.addCommand(createInteractiveCommand({
-  commands: interactiveCommandNames,
-  execute: createInteractiveCommandExecutor(cli),
-}));
+cli.addCommand(
+  createInteractiveCommand({
+    commands: interactiveCommandNames,
+    execute: createInteractiveCommandExecutor(cli),
+  }),
+);
 
 for (const command of commandsAfterInteractive) {
   cli.addCommand(command);
@@ -80,9 +86,9 @@ cli.configureOutput({
 });
 
 // Handle errors globally
-process.on('uncaughtException', (error) => {
+process.on("uncaughtException", (error) => {
   process.exit(handleError(error));
 });
-process.on('unhandledRejection', (reason) => {
+process.on("unhandledRejection", (reason) => {
   process.exit(handleError(reason));
 });
